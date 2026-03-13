@@ -27,7 +27,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Generate API docs
-        run: sphinx-apidoc -o docs/api project
+        run: sphinx-apidoc -o docs project
 
       - name: Generate documentation
         run: sphinx-build -b html docs docs/_build
