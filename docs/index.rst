@@ -9,7 +9,7 @@ Contents
 .. toctree::
    :maxdepth: 3
 
-   api
+   project
    modules
    
 Indices and tables
