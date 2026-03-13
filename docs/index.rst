@@ -1,5 +1,5 @@
 Demokratyczna apka
-=================
+====================
 
 Dokumentacja projektu.
 
@@ -10,7 +10,8 @@ Contents
    :maxdepth: 3
 
    api
-
+   modules
+   
 Indices and tables
 ------------------
 
