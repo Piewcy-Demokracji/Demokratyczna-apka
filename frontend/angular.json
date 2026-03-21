@@ -59,14 +59,14 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "voting-app:build"
+            "buildTarget": "voting-app:build"
           },
           "configurations": {
             "production": {
-              "browserTarget": "voting-app:build:production"
+              "buildTarget": "voting-app:build:production"
             },
             "development": {
-              "browserTarget": "voting-app:build:development"
+              "buildTarget": "voting-app:build:development"
             }
           },
           "defaultConfiguration": "development"
