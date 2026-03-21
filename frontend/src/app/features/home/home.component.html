@@ -1,0 +1,52 @@
+<div class="container">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <h1>Voting App</h1>
+    </div>
+    <div class="navbar-menu">
+      <div *ngIf="isLoggedIn" class="navbar-item">
+        <span>Welcome, {{ currentUsername }}!</span>
+        <button (click)="logout()" class="btn btn-logout">Logout</button>
+      </div>
+      <div *ngIf="!isLoggedIn" class="navbar-item">
+        <a href="/login" class="btn btn-link">Login</a>
+        <a href="/register" class="btn btn-link">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <section class="hero">
+      <h2>Welcome to the Voting App</h2>
+      <p>Create polls and vote on options with other users.</p>
+      
+      <div *ngIf="!isLoggedIn" class="cta-buttons">
+        <a href="/register" class="btn btn-primary">Get Started</a>
+        <a href="/login" class="btn btn-secondary">Login</a>
+      </div>
+
+      <div *ngIf="isLoggedIn" class="cta-buttons">
+        <a href="/polls" class="btn btn-primary">View Polls</a>
+        <a href="/create-poll" class="btn btn-secondary">Create Poll</a>
+      </div>
+    </section>
+
+    <section class="features">
+      <h3>Features</h3>
+      <div class="features-grid">
+        <div class="feature-card">
+          <h4>Create Polls</h4>
+          <p>Easily create new polls with multiple options.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Vote</h4>
+          <p>Cast your vote on active polls and see results in real-time.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Secure</h4>
+          <p>Your account is protected with secure authentication.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
