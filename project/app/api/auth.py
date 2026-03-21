@@ -32,7 +32,6 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         )
 
     # Create new user
-    print(f"DEBUG: Hasło do haszowania: {user.password}") # Sprawdź w logach co tu jest
     hashed_password = get_password_hash(user.password)
     db_user = User(
         username=user.username,
