@@ -10,7 +10,6 @@ body {
 }
 
 .container {
-  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -92,8 +91,10 @@ body {
 }
 
 .hero {
+  max-width: 800px;
+  margin: 0 auto;
   text-align: center;
-  padding: 3rem 0;
+  padding: 3rem 2rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-radius: 8px;
@@ -108,6 +109,46 @@ body {
 .hero p {
   font-size: 1.1rem;
   margin-bottom: 2rem;
+}
+
+.session-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.session-form input {
+  width: 100%;
+  max-width: 300px;
+  height: 80px;
+  font-size: 3rem;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  border: 3px solid #fff;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #2c3e50;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.session-form input:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+}
+
+.session-form input::placeholder {
+  color: #bdc3c7;
+  letter-spacing: normal;
+}
+
+.session-form .btn {
+  padding: 1rem 2rem;
+  font-size: 1.2rem;
+  min-width: 200px;
 }
 
 .cta-buttons {
