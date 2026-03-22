@@ -69,3 +69,40 @@ ALTER TABLE
     "pools" ADD CONSTRAINT "pools_set_id_foreign" FOREIGN KEY("set_id") REFERENCES "sets"("id");
 ALTER TABLE
     "votes" ADD CONSTRAINT "votes_user_id_foreign" FOREIGN KEY("user_id") REFERENCES "users"("id");
+
+CREATE OR REPLACE FUNCTION update_vote_counts()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        IF NEW.vote_value = true THEN
+            UPDATE "pool_options" SET "yes_votes" = "yes_votes" + 1 WHERE "id" = NEW."pool_option_id";
+        ELSE
+            UPDATE "pool_options" SET "no_votes" = "no_votes" + 1 WHERE "id" = NEW."pool_option_id";
+        END IF;
+        RETURN NEW;
+        
+    ELSIF (TG_OP = 'UPDATE') THEN
+        IF OLD.vote_value != NEW.vote_value THEN
+            IF NEW.vote_value = true THEN
+                UPDATE "pool_options" SET "yes_votes" = "yes_votes" + 1, "no_votes" = "no_votes" - 1 WHERE "id" = NEW."pool_option_id";
+            ELSE
+                UPDATE "pool_options" SET "yes_votes" = "yes_votes" - 1, "no_votes" = "no_votes" + 1 WHERE "id" = NEW."pool_option_id";
+            END IF;
+        END IF;
+        RETURN NEW;
+
+    ELSIF (TG_OP = 'DELETE') THEN
+        IF OLD.vote_value = true THEN
+            UPDATE "pool_options" SET "yes_votes" = "yes_votes" - 1 WHERE "id" = OLD."pool_option_id";
+        ELSE
+            UPDATE "pool_options" SET "no_votes" = "no_votes" - 1 WHERE "id" = OLD."pool_option_id";
+        END IF;
+        RETURN OLD;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_vote_changes
+AFTER INSERT OR UPDATE OR DELETE ON "votes"
+FOR EACH ROW
+EXECUTE FUNCTION update_vote_counts();
