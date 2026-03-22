@@ -58,6 +58,8 @@ ALTER TABLE
 ALTER TABLE
     "pool_options" ADD CONSTRAINT "pool_options_pool_id_foreign" FOREIGN KEY("pool_id") REFERENCES "pools"("id");
 ALTER TABLE
+    "votes" ADD CONSTRAINT "votes_pool_option_id_foreign" FOREIGN KEY("pool_option_id") REFERENCES "pool_options"("id");
+ALTER TABLE
     "set_options" ADD CONSTRAINT "set_options_set_id_foreign" FOREIGN KEY("set_id") REFERENCES "sets"("id");
 ALTER TABLE
     "sets" ADD CONSTRAINT "sets_user_id_foreign" FOREIGN KEY("user_id") REFERENCES "users"("id");
@@ -65,7 +67,5 @@ ALTER TABLE
     "votes" ADD CONSTRAINT "votes_pool_id_foreign" FOREIGN KEY("pool_id") REFERENCES "pools"("id");
 ALTER TABLE
     "pools" ADD CONSTRAINT "pools_set_id_foreign" FOREIGN KEY("set_id") REFERENCES "sets"("id");
-ALTER TABLE
-    "votes" ADD CONSTRAINT "votes_id_foreign" FOREIGN KEY("id") REFERENCES "pool_options"("id");
 ALTER TABLE
     "votes" ADD CONSTRAINT "votes_user_id_foreign" FOREIGN KEY("user_id") REFERENCES "users"("id");
