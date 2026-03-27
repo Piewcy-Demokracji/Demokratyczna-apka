@@ -1,0 +1,17 @@
+<div class="container session-container">
+  <div class="session-card">
+    <h1>Session :)</h1>
+    <div *ngIf="sessionEnded" class="session-ended">
+      <p>Session ended</p>
+      <p>You will be redirected to home...</p>
+    </div>
+    <div *ngIf="!sessionEnded">
+      <p>Session code: <strong>{{ sessionCode }}</strong></p>
+      <p>Your status: <strong>{{ status }}</strong></p>
+      <div class="session-actions">
+        <button *ngIf="isHost" class="btn btn-danger" (click)="endSession()">End session</button>
+        <button *ngIf="!isHost" class="btn btn-secondary" (click)="leaveSession()">Leave session</button>
+      </div>
+    </div>
+  </div>
+</div>

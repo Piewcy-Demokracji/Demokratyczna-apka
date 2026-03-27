@@ -32,3 +32,17 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+
+class SessionCreateResponse(BaseModel):
+    code: str
+    host: str
+
+
+class SessionStatusResponse(BaseModel):
+    code: str
+    host: str
+    status: str
+
+    class Config:
+        from_attributes = True

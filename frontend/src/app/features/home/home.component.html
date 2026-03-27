@@ -18,8 +18,17 @@
   <main class="main-content">
     <section class="hero">
       <h2>Enter 4-Digit Code</h2>
-      <form class="session-form">
-        <input type="text" placeholder="_ _ _ _" maxlength="4" pattern="[0-9]{4}" required />
+      <div class="session-controls">
+        <button class="btn btn-primary" (click)="createSession()" [disabled]="!isLoggedIn">Create Session</button>
+        <div *ngIf="!isLoggedIn" class="session-note">
+          Log in first to create a session.
+        </div>
+      </div>
+      <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+      <form class="session-form" (ngSubmit)="enterSession()">
+        <input type="text" name="joinCode" [(ngModel)]="joinCode" placeholder="_ _ _ _" maxlength="4" pattern="[0-9]{4}" required />
         <button type="submit" class="btn btn-primary">Enter Session</button>
       </form>
     </section>

@@ -7,6 +7,7 @@ import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HomeComponent } from './features/home/home.component';
+import { SessionComponent } from './features/session/session.component';
 import { LoginComponent } from './features/auth/login.component';
 import { RegisterComponent } from './features/auth/register.component';
 import { AuthInterceptor } from './core/auth.interceptor';
@@ -15,6 +16,7 @@ import { AuthInterceptor } from './core/auth.interceptor';
   declarations: [
     AppComponent,
     HomeComponent,
+    SessionComponent,
     LoginComponent,
     RegisterComponent
   ],
