@@ -1,0 +1,27 @@
+<div class="profile-page">
+  <div class="profile-header">
+    <img [src]="profilePic" alt="Profile picture" class="profile-pic" />
+    <div>
+      <h2>{{ username }}</h2>
+      <p>Your personal dashboard for your vote option sets.</p>
+    </div>
+  </div>
+
+  <div class="option-sets">
+    <h3>Your option sets</h3>
+    <div *ngFor="let set of optionSets" class="option-set-card">
+      <div class="option-set-details">
+        <h4>{{ set.name }}</h4>
+        <small>{{ set.optionsCount }} options</small>
+      </div>
+      <div class="option-set-actions">
+        <button class="btn btn-secondary" (click)="editSet(set)">Edit</button>
+        <button class="btn btn-primary" (click)="launchSet(set)">Launch</button>
+        <button class="btn btn-danger" (click)="deleteSet(set)">Delete</button>
+      </div>
+    </div>
+    <div class="new-set-wrapper">
+      <button class="btn btn-primary" (click)="addOptionSet()">Add New Option Set</button>
+    </div>
+  </div>
+</div>

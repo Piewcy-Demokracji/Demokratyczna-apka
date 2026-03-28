@@ -5,12 +5,14 @@ import { HomeComponent } from './features/home/home.component';
 import { LoginComponent } from './features/auth/login.component';
 import { RegisterComponent } from './features/auth/register.component';
 import { SessionComponent } from './features/session/session.component';
+import { ProfileComponent } from './features/profile/profile.component';
 
 const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'session/:code', component: SessionComponent },
+  { path: 'profile', component: ProfileComponent },
   { path: '**', redirectTo: '' }
 ];
 

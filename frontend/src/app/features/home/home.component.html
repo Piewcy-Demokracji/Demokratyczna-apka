@@ -12,6 +12,9 @@
         <a href="/login" class="btn btn-link">Login</a>
         <a href="/register" class="btn btn-link">Register</a>
       </div>
+      <div *ngIf="isLoggedIn" class="navbar-item">
+        <a href="/profile" class="btn btn-link">Profile</a>
+      </div>
     </div>
   </nav>
 

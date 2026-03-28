@@ -60,8 +60,21 @@ export class AuthService {
     return !!localStorage.getItem('token');
   }
 
+  whoAmI(): Observable<{ username: string }> {
+    return this.http.get<{ username: string }>(`${this.apiUrl}/me`).pipe(
+      tap(me => {
+        localStorage.setItem('username', me.username);
+        this.currentUserSubject.next(me.username);
+      })
+    );
+  }
+
   getToken(): string | null {
     return localStorage.getItem('token');
+  }
+
+  getCurrentUsername(): string | null {
+    return localStorage.getItem('username');
   }
 
   private getStoredUsername(): string | null {

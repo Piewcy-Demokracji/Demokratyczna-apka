@@ -7,6 +7,7 @@ from app.core.security import (
     verify_password,
     create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    get_current_user,
 )
 from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin, UserResponse, Token
@@ -58,3 +59,9 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         data={"sub": db_user.username}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.get("/me")
+def read_current_user(current_username: str = Depends(get_current_user)):
+    return {"username": current_username}
+
