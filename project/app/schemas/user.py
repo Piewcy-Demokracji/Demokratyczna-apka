@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -34,6 +34,21 @@ class TokenData(BaseModel):
     username: Optional[str] = None
 
 
+class PollOptionResponse(BaseModel):
+    id: int
+    name: str
+    rating_count: int
+    total_rating: int
+
+
+class PollResponse(BaseModel):
+    id: int
+    title: str
+    duration_seconds: int
+    start_time: int
+    options: List[PollOptionResponse]
+
+
 class SessionJoinRequest(BaseModel):
     code: str
 
@@ -48,6 +63,7 @@ class SessionStatusResponse(BaseModel):
     token: str
     host: str
     status: str
+    poll: Optional[PollResponse] = None
     code: Optional[str] = None
 
     class Config:

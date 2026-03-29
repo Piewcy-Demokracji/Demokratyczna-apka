@@ -8,10 +8,26 @@ export interface SessionCreateResponse {
   host: string;
 }
 
+export interface PollOption {
+  id: number;
+  name: string;
+  rating_count: number;
+  total_rating: number;
+}
+
+export interface Poll {
+  id: number;
+  title: string;
+  duration_seconds: number;
+  start_time: number;
+  options: PollOption[];
+}
+
 export interface SessionStatusResponse {
   token: string;
   host: string;
   status: 'Host' | 'Participant';
+  poll?: Poll;
   code?: string;
 }
 
@@ -33,6 +49,13 @@ export class SessionService {
 
   getSession(token: string): Observable<SessionStatusResponse> {
     return this.http.get<SessionStatusResponse>(`${this.apiUrl}/${token}`);
+  }
+
+  vote(token: string, optionId: number, rating: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${token}/vote`, {
+      option_id: optionId,
+      rating
+    });
   }
 
   leaveSession(token: string): Observable<void> {

@@ -1,17 +1,48 @@
 <div class="container session-container">
   <div class="session-card">
-    <h1>Session :)</h1>
-    <div *ngIf="sessionEnded" class="session-ended">
+    <h1>Session</h1>
+
+    <div *ngIf="message" class="alert alert-warning">{{ message }}</div>
+
+    <div *ngIf="sessionEnded && !message" class="session-ended">
       <p>Session ended</p>
       <p>You will be redirected to home...</p>
     </div>
-    <div *ngIf="!sessionEnded">
+
+    <div *ngIf="!sessionEnded && !message">
       <p *ngIf="sessionPassword">Session password: <strong>{{ sessionPassword }}</strong></p>
       <p>Your status: <strong>{{ status }}</strong></p>
       <div class="session-actions">
         <button *ngIf="isHost" class="btn btn-danger" (click)="endSession()">End session</button>
         <button *ngIf="!isHost" class="btn btn-secondary" (click)="leaveSession()">Leave session</button>
       </div>
+
+      <div *ngIf="poll && !isComplete" class="poll-section">
+        <h2>{{ poll.title }}</h2>
+        <p>Time left: {{ formatTime(timeLeft) }}</p>
+
+        <div *ngFor="let option of poll.options" class="option-card">
+          <div class="option-name">{{ option.name }}</div>
+          <div class="star-bar">
+            <span
+              *ngFor="let star of [1,2,3,4,5]"
+              (click)="rateOption(option, star)"
+              [class]="getStarClass(option, star)"
+            >&#9733;</span>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="isComplete && poll" class="summary-section">
+        <h2>Summary</h2>
+        <div *ngFor="let option of summaryOptions" class="summary-card">
+          <h3>{{ option.name }}</h3>
+          <p>Average: {{ (option.avg_rating || 0) | number:'1.1-1' }}</p>
+          <p>Votes: {{ option.rating_count }}</p>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" (click)="goHome()">Back to home</button>
     </div>
   </div>
 </div>

@@ -23,6 +23,9 @@ class Poll(Base):
     title = Column(String, index=True)
     description = Column(String)
     creator_id = Column(Integer)
+    session_id = Column(Integer, ForeignKey("sessions.id"), nullable=True, index=True)
+    duration_seconds = Column(Integer, default=180)
+    start_time = Column(Integer, default=lambda: int(datetime.utcnow().timestamp()))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -40,10 +43,12 @@ class Vote(Base):
     __tablename__ = "votes"
 
     id = Column(Integer, primary_key=True, index=True)
-    poll_id = Column(Integer)
-    option_id = Column(Integer)
-    user_id = Column(Integer)
+    poll_id = Column(Integer, ForeignKey("polls.id"), index=True)
+    option_id = Column(Integer, ForeignKey("poll_options.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    rating = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class Session(Base):

@@ -10,10 +10,9 @@
   background: #ffffff;
   border-radius: 12px;
   padding: 28px;
-  max-width: 420px;
+  max-width: 650px;
   width: 100%;
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.12);
-  text-align: center;
 }
 
 .session-card h1 {
@@ -24,15 +23,66 @@
   margin: 12px 0;
 }
 
-.btn-danger {
-  background: #d9534f;
-  border: none;
-  color: #ffffff;
-  padding: 10px 18px;
+.session-actions,
+.poll-section,
+.summary-section {
+  margin-top: 16px;
+}
+
+.option-card,
+.summary-card {
+  border: 1px solid #e8e8e8;
   border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.rate-meta {
+  margin-top: 8px;
+  color: #666666;
+}
+
+.star-bar {
+  margin-top: 8px;
+}
+
+.star {
+  cursor: pointer;
+  font-size: 24px;
+  color: #cccccc;
+  margin-right: 4px;
+}
+
+.star.active {
+  color: #fbbc04;
+}
+
+.btn-danger,
+.btn-secondary,
+.btn-primary {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: white;
   cursor: pointer;
 }
 
-.btn-danger:hover {
-  opacity: 0.92;
+.btn-secondary {
+  background: #6c757d;
 }
+
+.btn-primary {
+  background: #0275d8;
+}
+
+.alert {
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+}
+
+.alert-warning {
+  background: #fff3cd;
+  color: #856404;
+}
+
