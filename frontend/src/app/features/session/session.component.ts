@@ -54,15 +54,18 @@ export class SessionComponent implements OnInit, OnDestroy {
       this.currentUsername = username;
     });
 
-    const token = this.route.snapshot.paramMap.get('token');
-    if (!token) {
-      this.router.navigate(['/']);
-      return;
-    }
+    this.route.paramMap.subscribe(params => {
+      const token = params.get('token');
+      if (!token) {
+        this.router.navigate(['/']);
+        return;
+      }
 
-    this.sessionToken = token;
-    this.loadSession(token);
-    this.pollInterval = setInterval(() => this.checkSession(token), 5000);
+      this.resetSessionState();
+      this.sessionToken = token;
+      this.loadSession(token);
+      this.pollInterval = setInterval(() => this.checkSession(token), 5000);
+    });
   }
 
   ngOnDestroy(): void {
@@ -94,13 +97,18 @@ export class SessionComponent implements OnInit, OnDestroy {
   }
 
   private loadSession(token: string): void {
+    this.isComplete = false;
+    this.summaryOptions = [];
+    this.sessionEnded = false;
+    this.message = '';
+
     this.sessionService.getSession(token).subscribe({
       next: response => {
         this.handleSessionResponse(response);
         if (response.poll) {
           this.poll = {
             ...response.poll,
-            options: response.poll.options.map(o => ({ ...o, userRating: 0 }))
+            options: this.mapPollOptions(response.poll.options)
           };
           this.updateTimeFromPoll();
           this.startCountdown();
@@ -120,10 +128,7 @@ export class SessionComponent implements OnInit, OnDestroy {
         if (response.poll) {
           this.poll = {
             ...response.poll,
-            options: response.poll.options.map(o => ({
-              ...o,
-              userRating: 0
-            }))
+            options: this.mapPollOptions(response.poll.options)
           };
           this.updateTimeFromPoll();
           if (this.timeLeft <= 0 && !this.isComplete) {
@@ -157,6 +162,27 @@ export class SessionComponent implements OnInit, OnDestroy {
     this.router.navigate(['/']);
   }
 
+  private resetSessionState(): void {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+    if (this.timerId) {
+      clearInterval(this.timerId);
+      this.timerId = null;
+    }
+
+    this.sessionEnded = false;
+    this.poll = null;
+    this.timeLeft = 0;
+    this.isComplete = false;
+    this.summaryOptions = [];
+    this.message = '';
+    this.status = null;
+    this.isHost = false;
+    this.sessionPassword = null;
+  }
+
   private updateTimeFromPoll(): void {
     if (!this.poll || !this.poll.start_time) {
       this.timeLeft = 0;
@@ -166,6 +192,22 @@ export class SessionComponent implements OnInit, OnDestroy {
     const now = Math.floor(Date.now() / 1000);
     const elapsed = now - this.poll.start_time;
     this.timeLeft = Math.max(this.poll.duration_seconds - elapsed, 0);
+  }
+
+  private mapPollOptions(options: PollOption[]): PollOption[] {
+    const existingRatings = new Map<number, number>();
+    if (this.poll?.options) {
+      this.poll.options.forEach(option => {
+        if (option.userRating) {
+          existingRatings.set(option.id, option.userRating);
+        }
+      });
+    }
+
+    return options.map(option => ({
+      ...option,
+      userRating: existingRatings.get(option.id) ?? 0
+    }));
   }
 
   private startCountdown(): void {
@@ -235,7 +277,7 @@ export class SessionComponent implements OnInit, OnDestroy {
   }
 
   getStarClass(option: PollOption, index: number): string {
-    if ((option.userRating || 0) >= index) {
+    if ((option.userRating ?? 0) >= index) {
       return 'star active';
     }
     return 'star';

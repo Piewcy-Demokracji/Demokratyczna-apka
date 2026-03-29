@@ -289,6 +289,12 @@ def delete_session(token: str, db: Session = Depends(get_db), current_user: str 
     if session.host_username != current_user:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the session host can end this session")
 
+    poll = get_poll_by_session(db, session.id)
+    if poll:
+        db.query(VoteModel).filter(VoteModel.poll_id == poll.id).delete()
+        db.query(PollOptionModel).filter(PollOptionModel.poll_id == poll.id).delete()
+        db.delete(poll)
+
     db.query(SessionParticipant).filter(SessionParticipant.session_id == session.id).delete()
     db.delete(session)
     db.commit()

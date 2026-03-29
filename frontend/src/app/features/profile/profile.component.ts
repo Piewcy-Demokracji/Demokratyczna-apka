@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
 interface OptionSet {
@@ -21,7 +22,10 @@ export class ProfileComponent implements OnInit {
     { name: 'Favorite lunch spots', optionsCount: 6 }
   ];
 
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     if (this.authService.isLoggedIn()) {
@@ -52,5 +56,9 @@ export class ProfileComponent implements OnInit {
     console.log('Add new option set');
     const newSetName = `New set ${this.optionSets.length + 1}`;
     this.optionSets.push({ name: newSetName, optionsCount: 0 });
+  }
+
+  goHome(): void {
+    this.router.navigate(['/']);
   }
 }

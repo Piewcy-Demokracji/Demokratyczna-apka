@@ -8,6 +8,9 @@
   </div>
 
   <div class="option-sets">
+    <div class="profile-actions">
+      <button class="btn btn-secondary" (click)="goHome()">Home</button>
+    </div>
     <h3>Your option sets</h3>
     <div *ngFor="let set of optionSets" class="option-set-card">
       <div class="option-set-details">
