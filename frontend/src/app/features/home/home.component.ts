@@ -39,7 +39,7 @@ export class HomeComponent {
     this.sessionService.createSession().subscribe({
       next: response => {
         this.errorMessage = null;
-        this.router.navigate(['/session', response.code]);
+        this.router.navigate(['/session', response.token]);
       },
       error: () => {
         this.errorMessage = 'Unable to create session. Please try again.';
@@ -47,19 +47,23 @@ export class HomeComponent {
     });
   }
 
+  updateJoinCode(value: string): void {
+    this.joinCode = value.toUpperCase();
+  }
+
   enterSession(): void {
     if (!this.joinCode) {
-      this.errorMessage = 'Enter a valid 4-digit session code.';
+      this.errorMessage = 'Enter your session code.';
       return;
     }
 
-    this.sessionService.joinSession(this.joinCode).subscribe({
-      next: () => {
+    this.sessionService.joinSession(this.joinCode.trim()).subscribe({
+      next: response => {
         this.errorMessage = null;
-        this.router.navigate(['/session', this.joinCode]);
+        this.router.navigate(['/session', response.token]);
       },
       error: () => {
-        this.errorMessage = 'Invalid session code or you are not part of this session.';
+        this.errorMessage = 'Invalid session code.';
         this.joinCode = '';
       }
     });

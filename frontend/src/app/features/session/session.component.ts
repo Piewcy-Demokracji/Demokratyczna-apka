@@ -9,7 +9,8 @@ import { SessionService, SessionStatusResponse } from '../../core/services/sessi
   styleUrls: ['./session.component.css']
 })
 export class SessionComponent implements OnInit, OnDestroy {
-  sessionCode: string | null = null;
+  sessionToken: string | null = null;
+  sessionPassword: string | null = null;
   status: 'Host' | 'Participant' | null = null;
   isHost = false;
   currentUsername: string | null = null;
@@ -28,15 +29,15 @@ export class SessionComponent implements OnInit, OnDestroy {
       this.currentUsername = username;
     });
 
-    const code = this.route.snapshot.paramMap.get('code');
-    if (!code) {
+    const token = this.route.snapshot.paramMap.get('token');
+    if (!token) {
       this.router.navigate(['/']);
       return;
     }
 
-    this.sessionCode = code;
-    this.loadSession(code);
-    this.pollInterval = setInterval(() => this.checkSession(code), 5000);
+    this.sessionToken = token;
+    this.loadSession(token);
+    this.pollInterval = setInterval(() => this.checkSession(token), 5000);
   }
 
   ngOnDestroy(): void {
@@ -46,43 +47,43 @@ export class SessionComponent implements OnInit, OnDestroy {
   }
 
   endSession(): void {
-    if (!this.sessionCode) {
+    if (!this.sessionToken) {
       return;
     }
 
-    this.sessionService.endSession(this.sessionCode).subscribe({
+    this.sessionService.endSession(this.sessionToken).subscribe({
       next: () => this.redirectToHome(),
       error: () => this.redirectToHome()
     });
   }
 
   leaveSession(): void {
-    if (!this.sessionCode) {
+    if (!this.sessionToken) {
       return;
     }
 
-    this.sessionService.leaveSession(this.sessionCode).subscribe({
+    this.sessionService.leaveSession(this.sessionToken).subscribe({
       next: () => this.redirectToHome(),
       error: () => this.redirectToHome()
     });
   }
 
-  private loadSession(code: string): void {
-    this.sessionService.getSession(code).subscribe({
+  private loadSession(token: string): void {
+    this.sessionService.getSession(token).subscribe({
       next: response => this.handleSessionResponse(response),
       error: () => this.handleSessionEnded()
     });
   }
 
-  private checkSession(code: string): void {
-    this.sessionService.getSession(code).subscribe({
+  private checkSession(token: string): void {
+    this.sessionService.getSession(token).subscribe({
       next: () => {},
       error: () => this.handleSessionEnded()
     });
   }
 
   private handleSessionResponse(response: SessionStatusResponse): void {
-    this.sessionCode = response.code;
+    this.sessionPassword = response.code ?? null;
     this.status = response.status;
     this.isHost = response.status === 'Host';
   }

@@ -3,15 +3,18 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import Session as SessionModel, SessionParticipant
-from app.schemas.user import SessionCreateResponse, SessionStatusResponse
+from app.schemas.user import SessionCreateResponse, SessionJoinRequest, SessionStatusResponse
 import random
+import string
+import uuid
 
 router = APIRouter(prefix="/api/session", tags=["session"])
 
 
 def generate_session_code(db: Session) -> str:
-    for _ in range(10):
-        code = str(random.randint(1000, 9999))
+    allowed = string.ascii_uppercase + string.digits
+    for _ in range(20):
+        code = ''.join(random.choice(allowed) for _ in range(6))
         existing = db.query(SessionModel).filter(SessionModel.code == code).first()
         if not existing:
             return code
@@ -19,6 +22,22 @@ def generate_session_code(db: Session) -> str:
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="Unable to generate a unique session code",
     )
+
+
+def generate_session_token(db: Session) -> str:
+    for _ in range(10):
+        token = str(uuid.uuid4())
+        existing = db.query(SessionModel).filter(SessionModel.token == token).first()
+        if not existing:
+            return token
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Unable to generate a unique session token",
+    )
+
+
+def get_session_by_token(db: Session, token: str):
+    return db.query(SessionModel).filter(SessionModel.token == token).first()
 
 
 def get_session_by_code(db: Session, code: str):
@@ -37,15 +56,21 @@ def get_participant(db: Session, session_id: int, username: str):
 @router.post("/create", response_model=SessionCreateResponse)
 def create_session(db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
     code = generate_session_code(db)
-    session = SessionModel(code=code, host_username=current_user)
+    token = generate_session_token(db)
+    session = SessionModel(code=code, token=token, host_username=current_user)
     db.add(session)
     db.commit()
     db.refresh(session)
-    return SessionCreateResponse(code=session.code, host=session.host_username)
+    return SessionCreateResponse(token=session.token, code=session.code, host=session.host_username)
 
 
-@router.post("/{code}/join", response_model=SessionStatusResponse)
-def join_session(code: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+@router.post("/join", response_model=SessionStatusResponse)
+def join_session(
+    session_join: SessionJoinRequest,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    code = session_join.code.strip().upper()
     session = get_session_by_code(db, code)
     if not session:
         raise HTTPException(
@@ -63,12 +88,12 @@ def join_session(code: str, db: Session = Depends(get_db), current_user: str = D
             db.commit()
         status_value = "Participant"
 
-    return SessionStatusResponse(code=session.code, host=session.host_username, status=status_value)
+    return SessionStatusResponse(token=session.token, host=session.host_username, status=status_value)
 
 
-@router.get("/{code}", response_model=SessionStatusResponse)
-def get_session(code: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
-    session = get_session_by_code(db, code)
+@router.get("/{token}", response_model=SessionStatusResponse)
+def get_session(token: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+    session = get_session_by_token(db, token)
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -77,6 +102,7 @@ def get_session(code: str, db: Session = Depends(get_db), current_user: str = De
 
     if session.host_username == current_user:
         status_value = "Host"
+        response_code = session.code
     else:
         participant = get_participant(db, session.id, current_user)
         if not participant:
@@ -85,13 +111,14 @@ def get_session(code: str, db: Session = Depends(get_db), current_user: str = De
                 detail="Not part of this session",
             )
         status_value = "Participant"
+        response_code = None
 
-    return SessionStatusResponse(code=session.code, host=session.host_username, status=status_value)
+    return SessionStatusResponse(token=session.token, host=session.host_username, status=status_value, code=response_code)
 
 
-@router.post("/{code}/leave", status_code=status.HTTP_204_NO_CONTENT)
-def leave_session(code: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
-    session = get_session_by_code(db, code)
+@router.post("/{token}/leave", status_code=status.HTTP_204_NO_CONTENT)
+def leave_session(token: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+    session = get_session_by_token(db, token)
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -115,9 +142,9 @@ def leave_session(code: str, db: Session = Depends(get_db), current_user: str = 
     db.commit()
 
 
-@router.delete("/{code}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_session(code: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
-    session = get_session_by_code(db, code)
+@router.delete("/{token}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_session(token: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+    session = get_session_by_token(db, token)
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

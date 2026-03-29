@@ -34,15 +34,21 @@ class TokenData(BaseModel):
     username: Optional[str] = None
 
 
+class SessionJoinRequest(BaseModel):
+    code: str
+
+
 class SessionCreateResponse(BaseModel):
+    token: str
     code: str
     host: str
 
 
 class SessionStatusResponse(BaseModel):
-    code: str
+    token: str
     host: str
     status: str
+    code: Optional[str] = None
 
     class Config:
         from_attributes = True

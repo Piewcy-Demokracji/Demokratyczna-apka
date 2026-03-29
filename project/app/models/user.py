@@ -50,7 +50,8 @@ class Session(Base):
     __tablename__ = "sessions"
 
     id = Column(Integer, primary_key=True, index=True)
-    code = Column(String, unique=True, index=True)
+    token = Column(String, unique=True, index=True)
+    code = Column(String(6), unique=True, index=True)
     host_username = Column(String, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

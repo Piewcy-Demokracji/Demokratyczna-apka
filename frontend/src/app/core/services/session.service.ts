@@ -3,14 +3,16 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export interface SessionCreateResponse {
+  token: string;
   code: string;
   host: string;
 }
 
 export interface SessionStatusResponse {
-  code: string;
+  token: string;
   host: string;
   status: 'Host' | 'Participant';
+  code?: string;
 }
 
 @Injectable({
@@ -26,18 +28,18 @@ export class SessionService {
   }
 
   joinSession(code: string): Observable<SessionStatusResponse> {
-    return this.http.post<SessionStatusResponse>(`${this.apiUrl}/${code}/join`, {});
+    return this.http.post<SessionStatusResponse>(`${this.apiUrl}/join`, { code });
   }
 
-  getSession(code: string): Observable<SessionStatusResponse> {
-    return this.http.get<SessionStatusResponse>(`${this.apiUrl}/${code}`);
+  getSession(token: string): Observable<SessionStatusResponse> {
+    return this.http.get<SessionStatusResponse>(`${this.apiUrl}/${token}`);
   }
 
-  leaveSession(code: string): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/${code}/leave`, {});
+  leaveSession(token: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${token}/leave`, {});
   }
 
-  endSession(code: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${code}`);
+  endSession(token: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${token}`);
   }
 }

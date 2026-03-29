@@ -6,7 +6,7 @@
       <p>You will be redirected to home...</p>
     </div>
     <div *ngIf="!sessionEnded">
-      <p>Session code: <strong>{{ sessionCode }}</strong></p>
+      <p *ngIf="sessionPassword">Session password: <strong>{{ sessionPassword }}</strong></p>
       <p>Your status: <strong>{{ status }}</strong></p>
       <div class="session-actions">
         <button *ngIf="isHost" class="btn btn-danger" (click)="endSession()">End session</button>

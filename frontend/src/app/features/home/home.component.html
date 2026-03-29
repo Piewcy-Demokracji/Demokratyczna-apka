@@ -20,7 +20,7 @@
 
   <main class="main-content">
     <section class="hero">
-      <h2>Enter 4-Digit Code</h2>
+      <h2>Enter session code</h2>
       <div class="session-controls">
         <button class="btn btn-primary" (click)="createSession()" [disabled]="!isLoggedIn">Create Session</button>
         <div *ngIf="!isLoggedIn" class="session-note">
@@ -31,7 +31,7 @@
         {{ errorMessage }}
       </div>
       <form class="session-form" (ngSubmit)="enterSession()">
-        <input type="text" name="joinCode" [(ngModel)]="joinCode" placeholder="_ _ _ _" maxlength="4" pattern="[0-9]{4}" required />
+        <input type="text" name="joinCode" [(ngModel)]="joinCode" (ngModelChange)="updateJoinCode($event)" placeholder="_ _ _ - _ _ _" maxlength="6" pattern="[A-Za-z0-9]{6}" required />
         <button type="submit" class="btn btn-primary">Enter Session</button>
       </form>
     </section>
