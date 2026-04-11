@@ -14,12 +14,11 @@
       <p>Your status: <strong>{{ status }}</strong></p>
       <div class="session-actions">
         <button *ngIf="isHost" class="btn btn-danger" (click)="endSession()">End session</button>
-        <button *ngIf="isHost" class="btn btn-warning" (click)="endPollEarly()">End polling early</button>
+        <button *ngIf="isHost && !isComplete && timeLeft > 0" class="btn btn-secondary" (click)="endPollEarly()">End polling early</button>
         <button *ngIf="!isHost" class="btn btn-secondary" (click)="leaveSession()">Leave session</button>
       </div>
 
       <div *ngIf="poll && !isComplete" class="poll-section">
-        <h2>{{ poll.title }}</h2>
         <p>Time left: {{ formatTime(timeLeft) }}</p>
 
         <div *ngFor="let option of poll.options" class="option-card">
