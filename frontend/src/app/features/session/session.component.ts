@@ -112,7 +112,11 @@ export class SessionComponent implements OnInit, OnDestroy {
             options: this.mapPollOptions(response.poll.options)
           };
           this.updateTimeFromPoll();
-          this.startCountdown();
+          if (this.timeLeft <= 0) {
+            this.finishPolling();
+          } else {
+            this.startCountdown();
+          }
         }
       },
       error: () => this.handleSessionEnded()
@@ -261,8 +265,23 @@ export class SessionComponent implements OnInit, OnDestroy {
     if (!this.isHost || !this.sessionToken) {
       return;
     }
-    this.timeLeft = 0;
-    this.finishPolling();
+
+    this.sessionService.endPollEarly(this.sessionToken).subscribe({
+      next: response => {
+        if (response.poll) {
+          this.poll = {
+            ...response.poll,
+            options: this.mapPollOptions(response.poll.options)
+          };
+        }
+        this.updateTimeFromPoll();
+        this.finishPolling();
+      },
+      error: () => {
+        this.timeLeft = 0;
+        this.finishPolling();
+      }
+    });
   }
 
   goHome(): void {

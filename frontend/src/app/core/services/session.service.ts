@@ -63,6 +63,10 @@ export class SessionService {
     });
   }
 
+  endPollEarly(token: string): Observable<SessionStatusResponse> {
+    return this.http.post<SessionStatusResponse>(`${this.apiUrl}/${token}/end-poll-early`, {});
+  }
+
   leaveSession(token: string): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/${token}/leave`, {});
   }

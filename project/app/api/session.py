@@ -118,6 +118,12 @@ def get_poll_by_session(db: Session, session_id: int):
     return db.query(PollModel).filter(PollModel.session_id == session_id).first()
 
 
+def is_poll_expired(poll: PollModel) -> bool:
+    now = int(datetime.utcnow().timestamp())
+    elapsed = now - poll.start_time
+    return elapsed >= poll.duration_seconds
+
+
 def get_user_by_username(db: Session, username: str) -> User:
     user = db.query(User).filter(User.username == username).first()
     if not user:
@@ -269,6 +275,9 @@ def vote_on_option(token: str, vote: VoteRequest, db: Session = Depends(get_db),
     if not poll:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Poll not found")
 
+    if is_poll_expired(poll):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Voting has ended")
+
     option = db.query(PollOptionModel).filter(
         PollOptionModel.id == vote.option_id,
         PollOptionModel.poll_id == poll.id
@@ -326,6 +335,43 @@ def vote_on_option(token: str, vote: VoteRequest, db: Session = Depends(get_db),
 
     db.commit()
     return {"detail": "Vote recorded successfully"}
+
+
+@router.post("/{token}/end-poll-early", response_model=SessionStatusResponse)
+def end_poll_early(
+    token: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    session = get_session_by_token(db, token)
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    if session.host_username != current_user:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the session host can end polling early")
+
+    poll = get_poll_by_session(db, session.id)
+    if not poll:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Poll not found")
+
+    if not is_poll_expired(poll):
+        now = int(datetime.utcnow().timestamp())
+        elapsed = max(now - poll.start_time, 0)
+        poll.duration_seconds = elapsed
+        poll.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(poll)
+
+    user = get_user_by_username(db, current_user)
+    poll_data = get_poll_response(db, poll, session.id, user.id)
+
+    return SessionStatusResponse(
+        token=session.token,
+        code=session.code,
+        host=session.host_username,
+        status="Host",
+        poll=poll_data,
+    )
 
 
 @router.post("/{token}/leave", status_code=status.HTTP_204_NO_CONTENT)
