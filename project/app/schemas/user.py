@@ -39,6 +39,7 @@ class PollOptionResponse(BaseModel):
     name: str
     rating_count: int
     total_rating: int
+    user_rating: Optional[int] = 0
 
 
 class PollResponse(BaseModel):

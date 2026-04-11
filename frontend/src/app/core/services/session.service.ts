@@ -13,6 +13,7 @@ export interface PollOption {
   name: string;
   rating_count: number;
   total_rating: number;
+  user_rating?: number;
 }
 
 export interface Poll {

@@ -1,6 +1,6 @@
 <div class="container session-container">
   <div class="session-card">
-    <h1>Session</h1>
+    <h1>{{ poll?.title || 'Session' }}</h1>
 
     <div *ngIf="message" class="alert alert-warning">{{ message }}</div>
 
@@ -14,6 +14,7 @@
       <p>Your status: <strong>{{ status }}</strong></p>
       <div class="session-actions">
         <button *ngIf="isHost" class="btn btn-danger" (click)="endSession()">End session</button>
+        <button *ngIf="isHost" class="btn btn-warning" (click)="endPollEarly()">End polling early</button>
         <button *ngIf="!isHost" class="btn btn-secondary" (click)="leaveSession()">Leave session</button>
       </div>
 

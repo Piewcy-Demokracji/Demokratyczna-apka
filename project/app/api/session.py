@@ -6,6 +6,7 @@ from app.core.security import get_current_user
 from app.models.user import (
     Session as SessionModel,
     SessionParticipant,
+    SessionUserVotes,
     Poll as PollModel,
     PollOption as PollOptionModel,
     Vote as VoteModel,
@@ -17,10 +18,12 @@ from app.schemas.user import (
     PollResponse,
     PollOptionResponse,
 )
+from typing import Optional
 import random
 from datetime import datetime
 import string
 import uuid
+import json
 
 router = APIRouter(prefix="/api/session", tags=["session"])
 
@@ -67,10 +70,22 @@ def get_participant(db: Session, session_id: int, username: str):
     )
 
 
-def get_poll_response(db: Session, poll: PollModel) -> PollResponse:
+def get_poll_response(db: Session, poll: PollModel, session_id: int, current_user_id: Optional[int] = None) -> PollResponse:
     """Get poll with aggregated vote counts from database."""
     options = []
     poll_options = db.query(PollOptionModel).filter(PollOptionModel.poll_id == poll.id).all()
+
+    user_votes = {}
+    if current_user_id is not None:
+        saved_votes = db.query(SessionUserVotes).filter(
+            SessionUserVotes.session_id == session_id,
+            SessionUserVotes.user_id == current_user_id,
+        ).first()
+        if saved_votes and saved_votes.votes_json:
+            try:
+                user_votes = json.loads(saved_votes.votes_json)
+            except json.JSONDecodeError:
+                user_votes = {}
 
     for option in poll_options:
         votes = db.query(VoteModel).filter(VoteModel.option_id == option.id).all()
@@ -83,6 +98,7 @@ def get_poll_response(db: Session, poll: PollModel) -> PollResponse:
                 name=option.text,
                 rating_count=rating_count,
                 total_rating=total_rating,
+                user_rating=user_votes.get(str(option.id), 0),
             )
         )
 
@@ -99,12 +115,17 @@ def get_poll_by_session(db: Session, session_id: int):
     return db.query(PollModel).filter(PollModel.session_id == session_id).first()
 
 
+def get_user_by_username(db: Session, username: str) -> User:
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return user
+
+
 @router.post("/create", response_model=SessionCreateResponse)
 def create_session(db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
     # Get user
-    user = db.query(User).filter(User.username == current_user).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user = get_user_by_username(db, current_user)
 
     # Create session
     code = generate_session_code(db)
@@ -160,7 +181,8 @@ def join_session(
 
     # Get the actual poll for this session
     poll = get_poll_by_session(db, session.id)
-    poll_data = get_poll_response(db, poll) if poll else None
+    user = get_user_by_username(db, current_user)
+    poll_data = get_poll_response(db, poll, session.id, user.id) if poll else None
 
     return SessionStatusResponse(
         token=session.token,
@@ -187,7 +209,8 @@ def get_session(token: str, db: Session = Depends(get_db), current_user: str = D
 
     # Get the actual poll for this session
     poll = get_poll_by_session(db, session.id)
-    poll_data = get_poll_response(db, poll) if poll else None
+    user = get_user_by_username(db, current_user)
+    poll_data = get_poll_response(db, poll, session.id, user.id) if poll else None
 
     return SessionStatusResponse(
         token=session.token,
@@ -234,9 +257,7 @@ def vote_on_option(token: str, vote: VoteRequest, db: Session = Depends(get_db),
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Rating must be between 0 and 5")
 
     # Get user
-    user = db.query(User).filter(User.username == current_user).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user = get_user_by_username(db, current_user)
 
     # Check if user already voted on this option
     existing_vote = db.query(VoteModel).filter(
@@ -258,6 +279,26 @@ def vote_on_option(token: str, vote: VoteRequest, db: Session = Depends(get_db),
             rating=vote.rating
         )
         db.add(new_vote)
+
+    # Persist user's votes for this session to support reconnect/device switch.
+    user_votes_row = db.query(SessionUserVotes).filter(
+        SessionUserVotes.session_id == session.id,
+        SessionUserVotes.user_id == user.id,
+    ).first()
+    if not user_votes_row:
+        user_votes_row = SessionUserVotes(session_id=session.id, user_id=user.id, votes_json="{}")
+        db.add(user_votes_row)
+
+    votes_dict = {}
+    if user_votes_row.votes_json:
+        try:
+            votes_dict = json.loads(user_votes_row.votes_json)
+        except json.JSONDecodeError:
+            votes_dict = {}
+
+    votes_dict[str(vote.option_id)] = vote.rating
+    user_votes_row.votes_json = json.dumps(votes_dict)
+    user_votes_row.updated_at = datetime.utcnow()
 
     db.commit()
     return {"detail": "Vote recorded successfully"}
@@ -294,6 +335,8 @@ def delete_session(token: str, db: Session = Depends(get_db), current_user: str 
         db.query(VoteModel).filter(VoteModel.poll_id == poll.id).delete()
         db.query(PollOptionModel).filter(PollOptionModel.poll_id == poll.id).delete()
         db.delete(poll)
+
+    db.query(SessionUserVotes).filter(SessionUserVotes.session_id == session.id).delete()
 
     db.query(SessionParticipant).filter(SessionParticipant.session_id == session.id).delete()
     db.delete(session)

@@ -9,6 +9,7 @@ interface PollOption {
   rating_count: number;
   total_rating: number;
   userRating?: number;
+  user_rating?: number;
   avg_rating?: number;
 }
 
@@ -196,6 +197,7 @@ export class SessionComponent implements OnInit, OnDestroy {
 
   private mapPollOptions(options: PollOption[]): PollOption[] {
     const existingRatings = new Map<number, number>();
+
     if (this.poll?.options) {
       this.poll.options.forEach(option => {
         if (option.userRating) {
@@ -206,7 +208,7 @@ export class SessionComponent implements OnInit, OnDestroy {
 
     return options.map(option => ({
       ...option,
-      userRating: existingRatings.get(option.id) ?? 0
+      userRating: option.user_rating ?? option.userRating ?? existingRatings.get(option.id) ?? 0
     }));
   }
 
@@ -253,6 +255,14 @@ export class SessionComponent implements OnInit, OnDestroy {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
+  }
+
+  endPollEarly(): void {
+    if (!this.isHost || !this.sessionToken) {
+      return;
+    }
+    this.timeLeft = 0;
+    this.finishPolling();
   }
 
   goHome(): void {

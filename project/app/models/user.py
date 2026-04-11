@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
@@ -68,6 +68,18 @@ class SessionParticipant(Base):
     session_id = Column(Integer, ForeignKey("sessions.id"), index=True)
     username = Column(String, index=True)
     joined_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SessionUserVotes(Base):
+    __tablename__ = "session_user_votes"
+    __table_args__ = (UniqueConstraint("session_id", "user_id", name="uq_session_user_votes"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("sessions.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    votes_json = Column(Text, default="{}")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class PollTemplate(Base):
