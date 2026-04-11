@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
@@ -68,3 +68,21 @@ class SessionParticipant(Base):
     session_id = Column(Integer, ForeignKey("sessions.id"), index=True)
     username = Column(String, index=True)
     joined_at = Column(DateTime, default=datetime.utcnow)
+
+
+class PollTemplate(Base):
+    __tablename__ = "pool_template"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    description = Column(String, nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"))
+    is_public = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class PollTemplateOption(Base):
+    __tablename__ = "poll_template_options"
+
+    id = Column(Integer, primary_key=True, index=False)
+    template_id = Column(Integer, ForeignKey("pool_template.id"))
+    text = Column(String)

@@ -42,3 +42,42 @@ class Poll(PollBase):
 class VoteCreate(BaseModel):
     poll_id: int
     option_id: int
+
+
+class TemplateOptionBase(BaseModel):
+    text: str
+
+
+class TemplateOptionCreate(TemplateOptionBase):
+    pass
+
+
+class TemplateOptionResponse(BaseModel):
+    id: int
+    text: str
+
+    class Config:
+        from_attributes = True
+
+
+class TemplateCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    is_public: bool = False
+    options: List[str]
+
+class TemplateResponse(BaseModel):
+    id: int
+    title: str
+    description: Optional[str] = None
+    is_public: bool
+    created_by: int
+    options: List[TemplateOptionResponse] = []
+
+    class Config:
+        from_attributes = True
+
+class PollFromTemplateRequest(BaseModel):
+    title: Optional[str] = None
+    options: Optional[List[str]] = None
+    duration_seconds: int = 180

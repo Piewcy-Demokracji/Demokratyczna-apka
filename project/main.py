@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.models.user import Base
 from app.core.database import engine
-from app.api import auth, polls, session as session_api
+from app.api import auth, polls, session as session_api, templates
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -26,6 +26,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(polls.router)
 app.include_router(session_api.router)
+app.include_router(templates.router)
 
 
 @app.get("/")
