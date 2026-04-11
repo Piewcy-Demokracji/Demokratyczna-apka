@@ -18,7 +18,7 @@
     <div *ngFor="let set of optionSets" class="option-set-card">
       <div class="option-set-details">
         <h4>{{ set.name }}</h4>
-        <p *ngIf="set.description">{{ set.description }}</p>
+        <p *ngIf="set.description as description">{{ description }}</p>
         <small>{{ set.optionsCount }} options</small>
       </div>
       <div class="option-set-actions">
