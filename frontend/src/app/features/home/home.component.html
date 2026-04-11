@@ -21,12 +21,6 @@
   <main class="main-content">
     <section class="hero">
       <h2>Enter session code</h2>
-      <div class="session-controls">
-        <button class="btn btn-primary" (click)="createSession()" [disabled]="!isLoggedIn">Create Session</button>
-        <div *ngIf="!isLoggedIn" class="session-note">
-          Log in first to create a session.
-        </div>
-      </div>
       <div *ngIf="errorMessage" class="error-message">
         {{ errorMessage }}
       </div>
@@ -34,6 +28,9 @@
         <input type="text" name="joinCode" [(ngModel)]="joinCode" (ngModelChange)="updateJoinCode($event)" placeholder="_ _ _ - _ _ _" maxlength="6" pattern="[A-Za-z0-9]{6}" required />
         <button type="submit" class="btn btn-primary">Enter Session</button>
       </form>
+      <div *ngIf="isLoggedIn" class="session-note">
+        Or go to your <a href="/profile">profile</a> to create a session with your option sets.
+      </div>
     </section>
   </main>
 </div>

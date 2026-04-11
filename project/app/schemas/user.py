@@ -54,6 +54,10 @@ class SessionJoinRequest(BaseModel):
     code: str
 
 
+class SessionCreateRequest(BaseModel):
+    template_id: Optional[int] = None
+
+
 class SessionCreateResponse(BaseModel):
     token: str
     code: str

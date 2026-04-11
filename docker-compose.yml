@@ -23,10 +23,6 @@ services:
     container_name: voting_app_frontend
     ports:
       - "4200:4200"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: npm start
     networks:
       - voting_app_network
 

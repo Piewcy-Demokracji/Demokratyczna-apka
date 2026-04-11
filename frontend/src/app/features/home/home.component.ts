@@ -30,23 +30,6 @@ export class HomeComponent {
     this.router.navigate(['/']);
   }
 
-  createSession(): void {
-    if (!this.isLoggedIn) {
-      this.errorMessage = 'You must be logged in to create a session.';
-      return;
-    }
-
-    this.sessionService.createSession().subscribe({
-      next: response => {
-        this.errorMessage = null;
-        this.router.navigate(['/session', response.token]);
-      },
-      error: () => {
-        this.errorMessage = 'Unable to create session. Please try again.';
-      }
-    });
-  }
-
   updateJoinCode(value: string): void {
     this.joinCode = value.toUpperCase();
   }

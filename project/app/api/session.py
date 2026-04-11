@@ -11,12 +11,15 @@ from app.models.user import (
     PollOption as PollOptionModel,
     Vote as VoteModel,
     User,
+    PollTemplate,
+    PollTemplateOption,
 )
 from app.schemas.user import (
     SessionCreateResponse,
     SessionJoinRequest, SessionStatusResponse,
     PollResponse,
     PollOptionResponse,
+    SessionCreateRequest,
 )
 from typing import Optional
 import random
@@ -123,7 +126,11 @@ def get_user_by_username(db: Session, username: str) -> User:
 
 
 @router.post("/create", response_model=SessionCreateResponse)
-def create_session(db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+def create_session(
+    session_request: SessionCreateRequest = SessionCreateRequest(),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
     # Get user
     user = get_user_by_username(db, current_user)
 
@@ -137,9 +144,20 @@ def create_session(db: Session = Depends(get_db), current_user: str = Depends(ge
 
     # Create poll for this session
     now = int(datetime.utcnow().timestamp())
+    
+    # Get template if provided
+    template = None
+    if session_request.template_id:
+        template = db.query(PollTemplate).filter(PollTemplate.id == session_request.template_id).first()
+        if not template:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+    
+    poll_title = template.title if template else "Best coffee shop nearby"
+    poll_description = template.description if template else "Rate coffee places from 0-5"
+    
     poll = PollModel(
-        title="Best coffee shop nearby",
-        description="Rate coffee places from 0-5",
+        title=poll_title,
+        description=poll_description,
         creator_id=user.id,
         session_id=session.id,
         duration_seconds=180,
@@ -149,10 +167,16 @@ def create_session(db: Session = Depends(get_db), current_user: str = Depends(ge
     db.commit()
     db.refresh(poll)
 
-    # Create poll options
-    options = ["Starbucks", "Costa", "Local Cafe"]
-    for option_text in options:
-        db.add(PollOptionModel(poll_id=poll.id, text=option_text))
+    # Create poll options from template or use defaults
+    if template:
+        template_options = db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).all()
+        for template_option in template_options:
+            db.add(PollOptionModel(poll_id=poll.id, text=template_option.text))
+    else:
+        # Default options
+        options = ["Starbucks", "Costa", "Local Cafe"]
+        for option_text in options:
+            db.add(PollOptionModel(poll_id=poll.id, text=option_text))
     db.commit()
 
     return SessionCreateResponse(token=session.token, code=session.code, host=session.host_username)

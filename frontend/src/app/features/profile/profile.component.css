@@ -108,3 +108,18 @@
 .btn-danger:hover:not(:disabled) {
   background-color: #c0392b;
 }
+
+.no-option-sets {
+  text-align: center;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+  margin-bottom: 1rem;
+}
+
+.no-option-sets p {
+  color: #7f8c8d;
+  margin: 0;
+  font-size: 1.1rem;
+}

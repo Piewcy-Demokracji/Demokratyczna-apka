@@ -83,7 +83,7 @@ class SessionUserVotes(Base):
 
 
 class PollTemplate(Base):
-    __tablename__ = "pool_template"
+    __tablename__ = "poll_templates"
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
@@ -96,5 +96,5 @@ class PollTemplateOption(Base):
     __tablename__ = "poll_template_options"
 
     id = Column(Integer, primary_key=True, index=False)
-    template_id = Column(Integer, ForeignKey("pool_template.id"))
+    template_id = Column(Integer, ForeignKey("poll_templates.id"))
     text = Column(String)

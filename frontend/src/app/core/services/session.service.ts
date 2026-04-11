@@ -2,6 +2,10 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export interface SessionCreateRequest {
+  template_id?: number;
+}
+
 export interface SessionCreateResponse {
   token: string;
   code: string;
@@ -40,8 +44,8 @@ export class SessionService {
 
   constructor(private http: HttpClient) {}
 
-  createSession(): Observable<SessionCreateResponse> {
-    return this.http.post<SessionCreateResponse>(`${this.apiUrl}/create`, {});
+  createSession(request?: SessionCreateRequest): Observable<SessionCreateResponse> {
+    return this.http.post<SessionCreateResponse>(`${this.apiUrl}/create`, request || {});
   }
 
   joinSession(code: string): Observable<SessionStatusResponse> {

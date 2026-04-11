@@ -103,6 +103,40 @@ def get_template_by_id(
     return build_template_response(db, template)
 
 
+@router.put("/{template_id}", response_model=TemplateResponse)
+def update_template(
+        template_id: int,
+        data: TemplateCreate,
+        db: Session = Depends(get_db),
+        current_user: str = Depends(get_current_user)
+):
+    template = get_template(db, template_id)
+    user = get_user(db, current_user)
+    
+    if template.created_by != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can update this template")
+    
+    # Update template
+    template.title = data.title
+    template.description = data.description
+    template.is_public = data.is_public
+    
+    # Delete existing options
+    db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).delete()
+    
+    # Add new options
+    for option_text in data.options:
+        db.add(PollTemplateOption(
+            template_id=template.id,
+            text=option_text
+        ))
+    
+    db.commit()
+    db.refresh(template)
+    
+    return build_template_response(db, template)
+
+
 @router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_template(
         template_id: int,

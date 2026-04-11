@@ -12,9 +12,13 @@
       <button class="btn btn-secondary" (click)="goHome()">Home</button>
     </div>
     <h3>Your option sets</h3>
+    <div *ngIf="optionSets.length === 0" class="no-option-sets">
+      <p>You don't have any option sets yet. Create your first one to get started!</p>
+    </div>
     <div *ngFor="let set of optionSets" class="option-set-card">
       <div class="option-set-details">
         <h4>{{ set.name }}</h4>
+        <p *ngIf="set.description">{{ set.description }}</p>
         <small>{{ set.optionsCount }} options</small>
       </div>
       <div class="option-set-actions">
