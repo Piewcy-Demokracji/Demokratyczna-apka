@@ -19,6 +19,7 @@ interface OptionSet {
 export class ProfileComponent implements OnInit {
   username = 'PlaceholderUser';
   profilePic = 'https://via.placeholder.com/100';
+  isAdmin = false;
 
   optionSets: OptionSet[] = [];
 
@@ -38,10 +39,12 @@ export class ProfileComponent implements OnInit {
     this.authService.whoAmI().subscribe({
       next: data => {
         this.username = data.username;
+        this.isAdmin = data.is_admin;
         this.loadOptionSets();
       },
       error: () => {
         this.username = this.authService.getCurrentUsername() || 'PlaceholderUser';
+        this.isAdmin = this.authService.isAdmin();
         this.loadOptionSets();
       }
     });
@@ -93,6 +96,10 @@ export class ProfileComponent implements OnInit {
 
   addOptionSet(): void {
     this.router.navigate(['/profile/create-option-set']);
+  }
+
+  goToAdminReview(): void {
+    this.router.navigate(['/admin/option-sets']);
   }
 
   goHome(): void {

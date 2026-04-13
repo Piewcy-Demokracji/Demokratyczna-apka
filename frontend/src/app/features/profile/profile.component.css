@@ -71,8 +71,17 @@
 
 .profile-actions {
   display: flex;
+  gap: 0.75rem;
   justify-content: flex-end;
   margin-bottom: 1rem;
+}
+
+.btn-admin {
+  background-color: #f39c12;
+}
+
+.btn-admin:hover:not(:disabled) {
+  background-color: #d68910;
 }
 
 .btn {

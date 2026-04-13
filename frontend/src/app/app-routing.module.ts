@@ -7,6 +7,8 @@ import { RegisterComponent } from './features/auth/register.component';
 import { SessionComponent } from './features/session/session.component';
 import { ProfileComponent } from './features/profile/profile.component';
 import { CreateOptionSetComponent } from './features/profile/create-option-set/create-option-set.component';
+import { AdminOptionSetsComponent } from './features/admin/admin-option-sets/admin-option-sets.component';
+import { AdminOptionSetReviewComponent } from './features/admin/admin-option-set-review/admin-option-set-review.component';
 
 const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -16,6 +18,8 @@ const routes: Routes = [
   { path: 'profile', component: ProfileComponent },
   { path: 'profile/create-option-set', component: CreateOptionSetComponent },
   { path: 'profile/edit-option-set/:id', component: CreateOptionSetComponent },
+  { path: 'admin/option-sets', component: AdminOptionSetsComponent },
+  { path: 'admin/option-sets/:id', component: AdminOptionSetReviewComponent },
   { path: '**', redirectTo: '' }
 ];
 

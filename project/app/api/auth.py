@@ -62,6 +62,15 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 
 
 @router.get("/me")
-def read_current_user(current_username: str = Depends(get_current_user)):
-    return {"username": current_username}
+def read_current_user(
+    current_username: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.username == current_username).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    return {"username": current_username, "is_admin": user.is_admin}
 

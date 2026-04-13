@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 from app.models.user import (
-    PollTemplate, PollTemplateOption, User,
+    PollTemplate, PollTemplateOption, PollTemplatePublished, PollTemplatePublishedOption, User,
     Poll as PollModel, PollOption as PollOptionModel
 )
 from app.schemas.poll import (
-    TemplateResponse, TemplateCreate
+    TemplateResponse, TemplateCreate, AdminTemplateReviewResponse
 )
 from typing import List, Optional
 from app.core.database import get_db
@@ -36,8 +36,33 @@ def build_template_response(
         id=template.id,
         title=template.title,
         description=template.description,
-        is_public=template.is_public,
+        can_be_public=template.can_be_public,
         created_by=template.created_by,
+        options=options,
+    )
+
+
+def build_admin_template_review_response(
+        db: Session,
+        template: PollTemplate
+):
+    creator = db.query(User).filter(User.id == template.created_by).first()
+    published = db.query(PollTemplatePublished).filter(
+        PollTemplatePublished.original_poll_id == template.id
+    ).first()
+    options = (
+        db.query(PollTemplateOption)
+        .filter(PollTemplateOption.template_id == template.id)
+        .all()
+    )
+    return AdminTemplateReviewResponse(
+        id=template.id,
+        title=template.title,
+        description=template.description,
+        can_be_public=template.can_be_public,
+        is_publish=bool(published and published.is_public),
+        created_by=template.created_by,
+        creator_username=creator.username if creator else "unknown",
         options=options,
     )
 
@@ -58,7 +83,7 @@ def list_public_templates(
         ).all()
     else:
         templates = db.query(PollTemplate).filter(
-            (PollTemplate.is_public == True) | (PollTemplate.created_by == user.id)
+            (PollTemplate.can_be_public == True) | (PollTemplate.created_by == user.id)
         ).all()
 
     return [build_template_response(db, t) for t in templates]
@@ -74,7 +99,7 @@ def create_template(
     template = PollTemplate(
         title=data.title,
         description=data.description,
-        is_public=data.is_public,
+        can_be_public=data.can_be_public,
         created_by=user.id
     )
     db.add(template)
@@ -89,7 +114,7 @@ def create_template(
 
     return build_template_response(db, template)
 
-@router.get("/{template_id}", response_model=TemplateResponse)
+@router.get("/{template_id:int}", response_model=TemplateResponse)
 def get_template_by_id(
         template_id: int,
         db: Session = Depends(get_db),
@@ -97,13 +122,13 @@ def get_template_by_id(
 ):
     template = get_template(db, template_id)
     user = get_user(db, current_user)
-    if not template.is_public and template.created_by != user.id:
+    if not template.can_be_public and template.created_by != user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     return build_template_response(db, template)
 
 
-@router.put("/{template_id}", response_model=TemplateResponse)
+@router.put("/{template_id:int}", response_model=TemplateResponse)
 def update_template(
         template_id: int,
         data: TemplateCreate,
@@ -119,7 +144,7 @@ def update_template(
     # Update template
     template.title = data.title
     template.description = data.description
-    template.is_public = data.is_public
+    template.can_be_public = data.can_be_public
     
     # Delete existing options
     db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).delete()
@@ -137,7 +162,27 @@ def update_template(
     return build_template_response(db, template)
 
 
-@router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.patch("/{template_id:int}/can-be-public", response_model=TemplateResponse)
+def update_template_can_be_public(
+        template_id: int,
+        can_be_public: bool,
+        db: Session = Depends(get_db),
+        current_user: str = Depends(get_current_user)
+):
+    template = get_template(db, template_id)
+    user = get_user(db, current_user)
+
+    if template.created_by != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can update this template")
+
+    template.can_be_public = can_be_public
+    db.commit()
+    db.refresh(template)
+
+    return build_template_response(db, template)
+
+
+@router.delete("/{template_id:int}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_template(
         template_id: int,
         db: Session = Depends(get_db),
@@ -152,3 +197,155 @@ def delete_template(
     db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).delete()
     db.delete(template)
     db.commit()
+
+
+@router.get("/admin/review", response_model=List[AdminTemplateReviewResponse])
+def list_templates_for_admin_review(
+        db: Session = Depends(get_db),
+        current_user: str = Depends(get_current_user)
+):
+    user = get_user(db, current_user)
+    if not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+
+    templates = db.query(PollTemplate).filter(PollTemplate.can_be_public == True).all()
+    return [build_admin_template_review_response(db, template) for template in templates]
+
+
+@router.get("/admin/review/{template_id}", response_model=AdminTemplateReviewResponse)
+def get_template_for_admin_review(
+        template_id: int,
+        db: Session = Depends(get_db),
+        current_user: str = Depends(get_current_user)
+):
+    user = get_user(db, current_user)
+    if not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+
+    template = get_template(db, template_id)
+    if not template.can_be_public:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Template is not marked for publication")
+
+    return build_admin_template_review_response(db, template)
+
+
+@router.post("/admin/review/{template_id}/publish", status_code=status.HTTP_201_CREATED)
+def publish_template_from_admin_review(
+        template_id: int,
+        db: Session = Depends(get_db),
+        current_user: str = Depends(get_current_user)
+):
+    user = get_user(db, current_user)
+    if not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+
+    template = get_template(db, template_id)
+    if not template.can_be_public:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Template is not marked for publication")
+
+    existing = db.query(PollTemplatePublished).filter(
+        PollTemplatePublished.original_poll_id == template.id
+    ).first()
+    if existing:
+        return {"id": existing.id, "message": "Template already published"}
+
+    published = PollTemplatePublished(
+        original_poll_id=template.id,
+        title=template.title,
+        description=template.description,
+        created_by=template.created_by,
+        is_public=True
+    )
+    db.add(published)
+    db.commit()
+    db.refresh(published)
+
+    options = db.query(PollTemplateOption).filter(
+        PollTemplateOption.template_id == template.id
+    ).all()
+
+    for option in options:
+        db.add(PollTemplatePublishedOption(
+            published_template_id=published.id,
+            text=option.text
+        ))
+
+    db.commit()
+    return {"id": published.id, "message": "Template published successfully"}
+
+
+@router.post("/admin/review/{template_id}/reject", status_code=status.HTTP_200_OK)
+def reject_template_from_admin_review(
+        template_id: int,
+        db: Session = Depends(get_db),
+        current_user: str = Depends(get_current_user)
+):
+    user = get_user(db, current_user)
+    if not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+
+    template = get_template(db, template_id)
+    template.can_be_public = False
+
+    published_rows = db.query(PollTemplatePublished).filter(
+        PollTemplatePublished.original_poll_id == template.id
+    ).all()
+    for published in published_rows:
+        db.query(PollTemplatePublishedOption).filter(
+            PollTemplatePublishedOption.published_template_id == published.id
+        ).delete()
+        db.delete(published)
+
+    db.commit()
+
+    return {"message": "Template rejected and removed from publication queue and published tables"}
+
+
+@router.post("/{template_id:int}/publish", status_code=status.HTTP_201_CREATED)
+def publish_template(
+        template_id: int,
+        db: Session = Depends(get_db),
+        current_user: str = Depends(get_current_user)
+):
+    """Publish a template to make it available as a public option set"""
+    template = get_template(db, template_id)
+    user = get_user(db, current_user)
+    
+    if not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can publish templates")
+    
+    # Check if template is marked as can_be_public
+    if not template.can_be_public:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This template is not marked as able to be published")
+    
+    existing = db.query(PollTemplatePublished).filter(
+        PollTemplatePublished.original_poll_id == template.id
+    ).first()
+    if existing:
+        return {"id": existing.id, "message": "Template already published"}
+
+    published = PollTemplatePublished(
+        original_poll_id=template.id,
+        title=template.title,
+        description=template.description,
+        created_by=template.created_by,
+        is_public=True
+    )
+    db.add(published)
+    db.commit()
+    db.refresh(published)
+    
+    # Copy options from original template
+    options = db.query(PollTemplateOption).filter(
+        PollTemplateOption.template_id == template.id
+    ).all()
+    
+    for option in options:
+        db.add(PollTemplatePublishedOption(
+            published_template_id=published.id,
+            text=option.text
+        ))
+    
+    db.commit()
+    
+    return {"id": published.id, "message": "Template published successfully"}

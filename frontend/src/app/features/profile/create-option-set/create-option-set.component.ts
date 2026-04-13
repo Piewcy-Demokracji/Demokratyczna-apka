@@ -16,13 +16,14 @@ export class CreateOptionSetComponent implements OnInit {
   optionSet: CreateTemplateRequest = {
     title: '',
     description: '',
-    is_public: false,
+    can_be_public: false,
     options: ['']
   };
 
   isLoading = false;
   isEditing = false;
   editingId: number | null = null;
+  isSavingCanBePublic = false;
 
   constructor(
     private templateService: TemplateService,
@@ -50,7 +51,7 @@ export class CreateOptionSetComponent implements OnInit {
         this.optionSet = {
           title: template.title,
           description: template.description || '',
-          is_public: template.is_public,
+          can_be_public: template.can_be_public,
           options: template.options.map(opt => opt.text)
         };
       },
@@ -75,6 +76,27 @@ export class CreateOptionSetComponent implements OnInit {
     // No automatic adding of options - users must click "Add Option" button
   }
 
+  onCanBePublicChange(nextValue: boolean): void {
+    this.optionSet.can_be_public = nextValue;
+
+    if (!this.isEditing || !this.editingId || this.isSavingCanBePublic) {
+      return;
+    }
+
+    this.isSavingCanBePublic = true;
+    this.templateService.updateTemplateCanBePublic(this.editingId, this.optionSet.can_be_public).subscribe({
+      next: (template) => {
+        this.optionSet.can_be_public = template.can_be_public;
+        this.isSavingCanBePublic = false;
+      },
+      error: (error) => {
+        console.error('Error updating can_be_public:', error);
+        this.optionSet.can_be_public = !this.optionSet.can_be_public;
+        this.isSavingCanBePublic = false;
+      }
+    });
+  }
+
   onSubmit(): void {
     if (!this.optionSet.title.trim()) {
       return;
@@ -92,7 +114,7 @@ export class CreateOptionSetComponent implements OnInit {
     const request: CreateTemplateRequest = {
       title: this.optionSet.title.trim(),
       description: this.optionSet.description?.trim() || undefined,
-      is_public: this.optionSet.is_public,
+      can_be_public: this.optionSet.can_be_public,
       options: validOptions
     };
 

@@ -9,6 +9,7 @@
 
   <div class="option-sets">
     <div class="profile-actions">
+      <button *ngIf="isAdmin" class="btn btn-admin" (click)="goToAdminReview()">Admin Review</button>
       <button class="btn btn-secondary" (click)="goHome()">Home</button>
     </div>
     <h3>Your option sets</h3>

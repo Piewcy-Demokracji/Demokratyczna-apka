@@ -12,6 +12,7 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -89,12 +90,32 @@ class PollTemplate(Base):
     title = Column(String, index=True)
     description = Column(String, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"))
-    is_public = Column(Boolean, default=True)
+    can_be_public = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class PollTemplatePublished(Base):
+    __tablename__ = "poll_templates_publish"
+
+    id = Column(Integer, primary_key=True, index=True)
+    original_poll_id = Column(Integer, ForeignKey("poll_templates.id"), index=True)
+    title = Column(String, index=True)
+    description = Column(String, nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"))
+    is_public = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class PollTemplateOption(Base):
     __tablename__ = "poll_template_options"
 
     id = Column(Integer, primary_key=True, index=False)
     template_id = Column(Integer, ForeignKey("poll_templates.id"))
+    text = Column(String)
+
+
+class PollTemplatePublishedOption(Base):
+    __tablename__ = "poll_templates_publish_options"
+
+    id = Column(Integer, primary_key=True, index=False)
+    published_template_id = Column(Integer, ForeignKey("poll_templates_publish.id"))
     text = Column(String)

@@ -60,8 +60,9 @@
       <label class="checkbox-label">
         <input
           type="checkbox"
-          name="isPublic"
-          [(ngModel)]="optionSet.is_public">
+          name="canBePublic"
+          (ngModelChange)="onCanBePublicChange($event)"
+          [(ngModel)]="optionSet.can_be_public">
         Allow admins to publish this set for other users
       </label>
     </div>

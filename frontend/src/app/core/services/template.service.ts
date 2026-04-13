@@ -11,15 +11,17 @@ export interface Template {
   id: number;
   title: string;
   description?: string;
-  is_public: boolean;
+  can_be_public: boolean;
+  is_publish?: boolean;
   created_by: number;
+  creator_username?: string;
   options: TemplateOption[];
 }
 
 export interface CreateTemplateRequest {
   title: string;
   description?: string;
-  is_public: boolean;
+  can_be_public: boolean;
   options: string[];
 }
 
@@ -48,7 +50,33 @@ export class TemplateService {
     return this.http.put<Template>(`${this.apiUrl}/${id}`, template);
   }
 
+  updateTemplateCanBePublic(id: number, canBePublic: boolean): Observable<Template> {
+    return this.http.patch<Template>(`${this.apiUrl}/${id}/can-be-public`, null, {
+      params: { can_be_public: String(canBePublic) }
+    });
+  }
+
   deleteTemplate(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  publishTemplate(id: number): Observable<{id: number; message: string}> {
+    return this.http.post<{id: number; message: string}>(`${this.apiUrl}/${id}/publish`, {});
+  }
+
+  getAdminReviewTemplates(): Observable<Template[]> {
+    return this.http.get<Template[]>(`${this.apiUrl}/admin/review`);
+  }
+
+  getAdminReviewTemplate(id: number): Observable<Template> {
+    return this.http.get<Template>(`${this.apiUrl}/admin/review/${id}`);
+  }
+
+  publishFromAdminReview(id: number): Observable<{id: number; message: string}> {
+    return this.http.post<{id: number; message: string}>(`${this.apiUrl}/admin/review/${id}/publish`, {});
+  }
+
+  rejectFromAdminReview(id: number): Observable<{message: string}> {
+    return this.http.post<{message: string}>(`${this.apiUrl}/admin/review/${id}/reject`, {});
   }
 }

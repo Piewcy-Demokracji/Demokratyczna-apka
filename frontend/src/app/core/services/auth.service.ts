@@ -19,6 +19,11 @@ interface AuthResponse {
   token_type: string;
 }
 
+interface MeResponse {
+  username: string;
+  is_admin: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -45,6 +50,7 @@ export class AuthService {
       tap(response => {
         localStorage.setItem('token', response.access_token);
         localStorage.setItem('username', username);
+        localStorage.setItem('is_admin', 'false');
         this.currentUserSubject.next(username);
       })
     );
@@ -53,6 +59,7 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
+    localStorage.removeItem('is_admin');
     this.currentUserSubject.next(null);
   }
 
@@ -60,13 +67,18 @@ export class AuthService {
     return !!localStorage.getItem('token');
   }
 
-  whoAmI(): Observable<{ username: string }> {
-    return this.http.get<{ username: string }>(`${this.apiUrl}/me`).pipe(
+  whoAmI(): Observable<MeResponse> {
+    return this.http.get<MeResponse>(`${this.apiUrl}/me`).pipe(
       tap(me => {
         localStorage.setItem('username', me.username);
+        localStorage.setItem('is_admin', String(me.is_admin));
         this.currentUserSubject.next(me.username);
       })
     );
+  }
+
+  isAdmin(): boolean {
+    return localStorage.getItem('is_admin') === 'true';
   }
 
   getToken(): string | null {

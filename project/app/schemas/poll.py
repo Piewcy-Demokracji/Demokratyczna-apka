@@ -63,15 +63,29 @@ class TemplateOptionResponse(BaseModel):
 class TemplateCreate(BaseModel):
     title: str
     description: Optional[str] = None
-    is_public: bool = False
+    can_be_public: bool = False
     options: List[str]
 
 class TemplateResponse(BaseModel):
     id: int
     title: str
     description: Optional[str] = None
-    is_public: bool
+    can_be_public: bool
     created_by: int
+    options: List[TemplateOptionResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class AdminTemplateReviewResponse(BaseModel):
+    id: int
+    title: str
+    description: Optional[str] = None
+    can_be_public: bool
+    is_publish: bool
+    created_by: int
+    creator_username: str
     options: List[TemplateOptionResponse] = []
 
     class Config:

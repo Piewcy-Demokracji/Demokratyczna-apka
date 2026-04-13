@@ -14,6 +14,7 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     id: int
+    is_admin: bool
     created_at: datetime
 
     class Config:
