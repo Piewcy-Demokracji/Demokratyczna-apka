@@ -12,6 +12,7 @@ import { LoginComponent } from './features/auth/login.component';
 import { RegisterComponent } from './features/auth/register.component';
 import { ProfileComponent } from './features/profile/profile.component';
 import { AuthInterceptor } from './core/auth.interceptor';
+import { SessionLauncherComponent } from './features/session/session-launcher/session-launcher.component';
 
 @NgModule({
   declarations: [
@@ -20,7 +21,8 @@ import { AuthInterceptor } from './core/auth.interceptor';
     SessionComponent,
     LoginComponent,
     RegisterComponent,
-    ProfileComponent
+    ProfileComponent,
+    SessionLauncherComponent
   ],
   imports: [
     BrowserModule,

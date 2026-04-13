@@ -166,23 +166,23 @@ def create_session(
         description=poll_description,
         creator_id=user.id,
         session_id=session.id,
-        duration_seconds=180,
+        duration_seconds=session_request.duration_seconds,
         start_time=now,
     )
     db.add(poll)
     db.commit()
     db.refresh(poll)
 
+    if session_request.options:
+        for option_text in session_request.options:
+            db.add(PollOptionModel(poll_id=poll.id, text=option_text))
     # Create poll options from template or use defaults
-    if template:
-        template_options = db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).all()
+    elif template:
+        template_options = db.query(PollTemplateOption).filter(
+            PollTemplateOption.template_id == template.id
+        ).all()
         for template_option in template_options:
             db.add(PollOptionModel(poll_id=poll.id, text=template_option.text))
-    else:
-        # Default options
-        options = ["Starbucks", "Costa", "Local Cafe"]
-        for option_text in options:
-            db.add(PollOptionModel(poll_id=poll.id, text=option_text))
     db.commit()
 
     return SessionCreateResponse(token=session.token, code=session.code, host=session.host_username)

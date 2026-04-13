@@ -4,6 +4,8 @@ import { Observable } from 'rxjs';
 
 export interface SessionCreateRequest {
   template_id?: number;
+  duration_seconds?: number;
+  options?: string[];
 }
 
 export interface SessionCreateResponse {

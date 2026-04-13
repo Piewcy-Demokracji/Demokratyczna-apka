@@ -24,7 +24,7 @@
       </div>
       <div class="option-set-actions">
         <button class="btn btn-secondary" (click)="editSet(set)">Edit</button>
-        <button class="btn btn-primary" (click)="launchSet(set)">Launch</button>
+        <a [routerLink]="['/session/launch', set.id]" class="btn btn-primary">Użyj</a>
         <button class="btn btn-danger" (click)="deleteSet(set)">Delete</button>
       </div>
     </div>

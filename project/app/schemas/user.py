@@ -57,6 +57,8 @@ class SessionJoinRequest(BaseModel):
 
 class SessionCreateRequest(BaseModel):
     template_id: Optional[int] = None
+    duration_seconds: int = 180
+    options: Optional[List[str]] = None
 
 
 class SessionCreateResponse(BaseModel):

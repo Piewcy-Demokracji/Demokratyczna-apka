@@ -1,0 +1,52 @@
+<div class="launcher-page">
+  <div class="launcher-card">
+    <a routerLink="/profile" class="back-link">← Wróć do profilu</a>
+
+    <div *ngIf="loading" class="loading">Ładowanie szablonu...</div>
+
+    <ng-container *ngIf="!loading">
+      <h1>Konfiguruj ankietę</h1>
+
+      <div class="field">
+        <label>Tytuł</label>
+        <input [(ngModel)]="title" name="title" placeholder="Tytuł ankiety" />
+      </div>
+
+      <div class="field">
+        <label>Opcje</label>
+        <div class="options-list">
+          <div class="option-row" *ngFor="let opt of options; let i = index; trackBy: trackByIndex">
+            <span class="num">{{ i + 1 }}.</span>
+            <input [(ngModel)]="options[i]" [name]="'opt' + i" placeholder="Opcja {{ i + 1 }}" />
+            <button type="button" (click)="removeOption(i)" [disabled]="options.length <= 2" class="btn-remove">✕</button>
+          </div>
+        </div>
+        <button type="button" (click)="addOption()" class="btn-add">+ Dodaj opcję</button>
+      </div>
+
+      <div class="field">
+        <label>Czas trwania</label>
+        <div class="presets">
+          <button type="button" *ngFor="let p of presets"
+            class="preset-btn" [class.active]="durationMinutes === p.value"
+            (click)="durationMinutes = p.value">{{ p.label }}</button>
+        </div>
+        <div class="custom-row">
+          <span>Własny:</span>
+          <input type="number" [(ngModel)]="durationMinutes" name="duration" min="1" max="60" />
+          <span>minut</span>
+        </div>
+      </div>
+
+      <div class="summary">
+        <strong>{{ title || '—' }}</strong> · {{ filledOptionsCount }} opcji · {{ durationMinutes }} min
+      </div>
+
+      <div *ngIf="error" class="error-msg">{{ error }}</div>
+
+      <button class="btn-primary" (click)="launch()" [disabled]="launching">
+        {{ launching ? 'Uruchamianie...' : '🚀 Uruchom sesję' }}
+      </button>
+    </ng-container>
+  </div>
+</div>

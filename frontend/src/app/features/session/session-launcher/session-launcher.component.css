@@ -1,0 +1,30 @@
+.launcher-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f5f5f5; padding: 1rem; }
+.launcher-card { background: white; border-radius: 12px; padding: 2rem; width: 100%; max-width: 480px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+.back-link { font-size: 0.85rem; color: #7f8c8d; text-decoration: none; display: inline-block; margin-bottom: 1.25rem; }
+.back-link:hover { color: #2c3e50; }
+h1 { font-size: 1.4rem; margin-bottom: 1.5rem; color: #2c3e50; }
+.field { margin-bottom: 1.5rem; }
+.field > label { display: block; font-weight: 500; font-size: 0.875rem; margin-bottom: 0.6rem; color: #2c3e50; }
+.field > input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; }
+.field > input:focus { outline: none; border-color: #3498db; }
+.options-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
+.option-row { display: flex; align-items: center; gap: 0.5rem; }
+.num { color: #bdc3c7; width: 20px; font-size: 0.85rem; flex-shrink: 0; }
+.option-row input { flex: 1; padding: 0.45rem 0.7rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; }
+.btn-remove { border: 1px solid #eee; border-radius: 6px; padding: 0.35rem 0.6rem; color: #bdc3c7; cursor: pointer; background: none; }
+.btn-remove:hover:not(:disabled) { border-color: #e74c3c; color: #e74c3c; }
+.btn-remove:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-add { border: 1px dashed #ddd; border-radius: 6px; padding: 0.4rem 1rem; color: #7f8c8d; cursor: pointer; background: none; font-size: 0.85rem; }
+.btn-add:hover { border-color: #3498db; color: #3498db; }
+.presets { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+.preset-btn { flex: 1; padding: 0.5rem; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; }
+.preset-btn.active { background: #3498db; color: white; border-color: #3498db; }
+.preset-btn:hover:not(.active) { border-color: #3498db; color: #3498db; }
+.custom-row { display: flex; align-items: center; gap: 0.5rem; color: #7f8c8d; font-size: 0.875rem; }
+.custom-row input { width: 70px; padding: 0.4rem 0.6rem; border: 1px solid #ddd; border-radius: 6px; }
+.summary { background: #ebf5fb; border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.875rem; color: #2980b9; margin-bottom: 1.25rem; }
+.error-msg { color: #e74c3c; font-size: 0.875rem; margin-bottom: 1rem; }
+.btn-primary { width: 100%; background: #3498db; color: white; border: none; border-radius: 8px; padding: 0.75rem; font-size: 1rem; cursor: pointer; }
+.btn-primary:hover:not(:disabled) { background: #2980b9; }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.loading { text-align: center; color: #7f8c8d; padding: 2rem; }
