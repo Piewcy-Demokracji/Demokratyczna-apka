@@ -27,11 +27,65 @@ from datetime import datetime
 import string
 import uuid
 import json
+from PIL import Image, ImageDraw, ImageFont
 
 router = APIRouter(prefix="/api/session", tags=["session"])
 
+def generate_image_with_poll_results(poll: PollResponse) -> Image.Image:
+    """
+        Generates an image with the poll results, showing the top 10 options based on their average rating.
+
+        param poll: PollResponse - The poll containing the options and their ratings.
+
+        return: An image object with the poll results displayed.
+    """
+    options_scored = []
+    max_name_length = 0
+
+    for option in poll.options:
+        final_score = (option.total_rating / option.rating_count) if (option.rating_count > 0) else 0
+        options_scored.append((option, final_score))
+        max_name_length = max(max_name_length, len(option.name))
+
+    options_scored.sort(key=lambda x: x[1], reverse=True)
+    
+    image_width = max_name_length * 40 + 50
+    image_height = 400 #Add adjustable height once options with images are implemented
+    background_color = (134,0,21)
+    font_color = (34,177,76)
+
+    results_img = Image.new("RGB", (image_width,image_height), color=background_color)
+    d = ImageDraw.Draw(results_img)
+    font = ImageFont.truetype("arial.ttf", 20) #Think about adjustable font size based on options max name length and image width once images are implemented
+    
+    row_modifier = 1
+    column = 0 
+
+    for i in range(0, min(10, len(options_scored))):
+        option, final_score = options_scored[i]
+        x = 100 + max_name_length * 20 * column
+        y = 30 + 50 * row_modifier
+        d.text(( x , y ),
+                f"{i+1}. {option.name}: {final_score:.2f}",
+                fill=font_color,
+                font=font, 
+                stroke_width=1, 
+                stroke_fill=font_color)
+        row_modifier += 1
+        if i % 5 == 4:
+            column += 1
+            row_modifier = 1
+
+    return results_img #Remember to close the image after sending it or better save it temporarily instead.
 
 def generate_session_code(db: Session) -> str:
+    """
+    Generates a unique 6-character session code consisting of uppercase letters and digits.
+
+    param db: Database session for checking existing codes.
+
+    return: A unique session code.
+    """
     allowed = string.ascii_uppercase + string.digits
     for _ in range(20):
         code = ''.join(random.choice(allowed) for _ in range(6))
@@ -45,6 +99,13 @@ def generate_session_code(db: Session) -> str:
 
 
 def generate_session_token(db: Session) -> str:
+    """
+    Generates a unique session token using UUID4.
+
+    param db: Database session for checking existing tokens.
+
+    return: A unique session token.
+    """
     for _ in range(10):
         token = str(uuid.uuid4())
         existing = db.query(SessionModel).filter(SessionModel.token == token).first()
@@ -57,14 +118,39 @@ def generate_session_token(db: Session) -> str:
 
 
 def get_session_by_token(db: Session, token: str):
+    """
+    Fetches a session from the database based on the provided token.
+
+    param db: Database session for querying.
+    param token: The unique token associated with the session.
+
+    return: The session object if found, otherwise None.
+    """
     return db.query(SessionModel).filter(SessionModel.token == token).first()
 
 
 def get_session_by_code(db: Session, code: str):
+    """
+    Fetches a session from the database based on the provided session code.
+
+    param db: Database session for querying.
+    param code: The unique session code.
+
+    return: The session object if found, otherwise None.
+    """
     return db.query(SessionModel).filter(SessionModel.code == code).first()
 
 
 def get_participant(db: Session, session_id: int, username: str):
+    """
+    Fetches a session participant from the database based on the session ID and username.
+
+    param db: Database session for querying.
+    param session_id: The ID of the session.
+    param username: The username of the participant.
+
+    return: The session participant object if found, otherwise None.
+    """
     return (
         db.query(SessionParticipant)
         .filter(SessionParticipant.session_id == session_id)
@@ -74,7 +160,16 @@ def get_participant(db: Session, session_id: int, username: str):
 
 
 def get_poll_response(db: Session, poll: PollModel, session_id: int, current_user_id: Optional[int] = None) -> PollResponse:
-    """Get poll with aggregated vote counts from database."""
+    """
+    Get poll with aggregated vote counts from database.
+
+    param db: Database session for querying.
+    param poll: The poll for which to fetch the results.
+    param session_id: The ID of the session to which the poll belongs.
+    param current_user_id: The ID of the current user (optional, used to include user's own vote in the response).
+
+    return: A PollResponse object containing the poll details and aggregated vote counts.
+    """
     options = []
     poll_options = db.query(PollOptionModel).filter(PollOptionModel.poll_id == poll.id).all()
 
@@ -115,16 +210,39 @@ def get_poll_response(db: Session, poll: PollModel, session_id: int, current_use
 
 
 def get_poll_by_session(db: Session, session_id: int):
+    """
+    Fetches the poll associated with a given session ID.
+
+    param db: Database session for querying.
+    param session_id: The ID of the session for which to fetch the poll.
+
+    return: The poll object if found, otherwise None.
+    """
     return db.query(PollModel).filter(PollModel.session_id == session_id).first()
 
 
 def is_poll_expired(poll: PollModel) -> bool:
+    """
+    Checks if the poll has expired based on its start time and duration.
+    
+    param poll: The poll to ckeck for expiration.
+    
+    return: True if the poll has expired, otherwise False.
+    """
     now = int(datetime.utcnow().timestamp())
     elapsed = now - poll.start_time
     return elapsed >= poll.duration_seconds
 
 
 def get_user_by_username(db: Session, username: str) -> User:
+    """
+    Fetches a user from the database based on the provided username.
+
+    param db: Database session for querying.
+    param username: The username of the user to fetch.
+
+    return: The user object if found, otherwise raises HTTPException with 404 status.
+    """
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -137,6 +255,15 @@ def create_session(
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
+    """
+    Endpoint to create a new session.
+
+    param session_request: The request body containing optional template ID, duration, and options for the poll.
+    param db: Database session for querying and persisting data.
+    param current_user: The username of the currently authenticated user.
+
+    return: A SessionCreateResponse object containing the session token, code and host username.
+    """
     # Get user
     user = get_user_by_username(db, current_user)
 
@@ -194,6 +321,15 @@ def join_session(
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user),
 ):
+    """
+    Endpoint to join an existing session using a session code.
+
+    param session_join: The request body containing the session code to join.
+    param db: Database session for querying and persisting data.
+    param current_user: The username of the currently authenticated user.
+
+    return: A SessionStatusResponse object containing the session token, host username, status (Host/Participant), and poll details if available.
+    """
     code = session_join.code.strip().upper()
     session = get_session_by_code(db, code)
     if not session:
@@ -224,6 +360,15 @@ def join_session(
 
 @router.get("/{token}", response_model=SessionStatusResponse)
 def get_session(token: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+    """
+    Endpoint to get the current status of a session, including poll details if available.
+
+    param token: The unique token associated with the session.
+    param db: Database session for querying.
+    param current_user: The username of the currently authenticated user.
+
+    return: A SessionStatusResponse object containing the session token, host username, status (Host/Participant), and poll details if available.
+    """
     session = get_session_by_token(db, token)
     if not session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
@@ -252,13 +397,29 @@ def get_session(token: str, db: Session = Depends(get_db), current_user: str = D
 
 
 class VoteRequest(BaseModel):
+    """
+    Request body for voting on a poll option, containing the option ID and the rating value.
+
+    Arg:
+    option_id (int): The ID of the poll option being voted on.
+    rating (int): The rating value for the option, typically between 0 and 5.
+    """
     option_id: int
     rating: int
 
 
 @router.post("/{token}/vote", response_model=dict)
 def vote_on_option(token: str, vote: VoteRequest, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
-    """Record a vote on a poll option."""
+    """
+    Records a vote on a poll option. 
+
+    param token: The unique token associated with the session.
+    param vote: The request body containing the option ID and rating value.
+    param db: Database session for querying and persisting data.
+    param current_user: The username of the currently authenticated user.
+
+    return: A dictionary containing a success message if the vote was recorded successfully, otherwise raises an HTTPException with an appropriate error message and status code.
+    """
     session = get_session_by_token(db, token)
     if not session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
@@ -343,6 +504,15 @@ def end_poll_early(
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user),
 ):
+    """
+    Endpoint to end the poll early, allowing the host to finalize the results before the original duration has expired.
+
+    param token: The unique token associated with the session.
+    param db: Database session for querying and persisting data.
+    param current_user: The username of the currently authenticated user.
+    
+    return: A SessionStatusResponse object containing the session token, host username, status (Host), and poll details with final results.
+    """
     session = get_session_by_token(db, token)
     if not session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
@@ -376,6 +546,15 @@ def end_poll_early(
 
 @router.post("/{token}/leave", status_code=status.HTTP_204_NO_CONTENT)
 def leave_session(token: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+    """
+    Endpoint for a participant to leave a session. The host cannot leave the session and must end it instead.
+
+    param token: The unique token associated with the session.
+    param db: Database session for querying and persisting data.
+    param current_user: The username of the currently authenticated user.
+
+    return: No content if the participant succesfully leaves the session, otehrwise raises an HTTPException with an appropriate error message and status code.
+    """
     session = get_session_by_token(db, token)
     if not session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
@@ -393,6 +572,15 @@ def leave_session(token: str, db: Session = Depends(get_db), current_user: str =
 
 @router.delete("/{token}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_session(token: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+    """
+    Endpoint to delete a session. Only the host can delete the session, which will remove all associated data including the poll, options, votes and prticipants.
+
+    param token: The unique token associated with the session.
+    param db: Database session for querying and persisting data.
+    param current_user: The username of the currently authenticated user.
+
+    return: No content if the session was deleted successfully, otherwise raises an HTTPException with an appropriate error message and status code.
+    """
     session = get_session_by_token(db, token)
     if not session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
