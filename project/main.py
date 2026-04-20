@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
-from app.models.user import Base
-from app.core.database import engine
+from app.models.user import Base, User
+from app.core.database import engine, SessionLocal
+from app.core.security import get_password_hash
 from app.api import auth, polls, session as session_api, templates
 
 
@@ -54,6 +55,26 @@ run_sqlite_migrations()
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
+
+
+def create_default_admin_user() -> None:
+    db = SessionLocal()
+    try:
+        existing_admin = db.query(User).filter(User.username == "admin1").first()
+        if not existing_admin:
+            admin_user = User(
+                username="admin1",
+                email="admin1@example.com",
+                hashed_password=get_password_hash("admin1"),
+                is_admin=True,
+            )
+            db.add(admin_user)
+            db.commit()
+    finally:
+        db.close()
+
+
+create_default_admin_user()
 
 app = FastAPI(
     title="Voting App API",
