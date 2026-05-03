@@ -72,6 +72,10 @@ export class TemplateService {
     return this.http.get<Template>(`${this.apiUrl}/admin/review/${id}`);
   }
 
+  getPublicTemplates(): Observable<Template[]> {
+    return this.http.get<Template[]>(`${this.apiUrl}/public`);
+  }
+
   publishFromAdminReview(id: number): Observable<{id: number; message: string}> {
     return this.http.post<{id: number; message: string}>(`${this.apiUrl}/admin/review/${id}/publish`, {});
   }

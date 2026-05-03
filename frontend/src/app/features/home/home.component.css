@@ -182,6 +182,96 @@ body {
   transition: transform 0.3s ease;
 }
 
+.public-option-sets {
+  max-width: 1000px;
+  margin: 2rem auto 0;
+  width: 100%;
+}
+
+.public-option-sets h2 {
+  font-size: 2.2rem;
+  margin-bottom: 1rem;
+  color: #2c3e50;
+  text-align: center;
+}
+
+.public-login-prompt,
+.alert-message,
+.no-public-sets {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.public-login-prompt p {
+  margin-bottom: 0.75rem;
+  color: #2c3e50;
+}
+
+.alert-message {
+  color: #c0392b;
+}
+
+.option-set-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+}
+
+.option-set-details {
+  max-width: 65%;
+}
+
+.option-set-details h4 {
+  margin: 0 0 0.25rem;
+  color: #2c3e50;
+}
+
+.option-set-details p {
+  margin: 0 0 0.75rem;
+  color: #7f8c8d;
+  line-height: 1.5;
+}
+
+.option-set-details small {
+  color: #7f8c8d;
+}
+
+.option-set-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.option-set-actions .btn {
+  min-width: 110px;
+}
+
+@media (max-width: 760px) {
+  .option-set-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .option-set-details {
+    max-width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .option-set-actions {
+    justify-content: center;
+  }
+}
+
 .feature-card:hover {
   transform: translateY(-5px);
 }

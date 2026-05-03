@@ -89,6 +89,22 @@ def list_public_templates(
     return [build_template_response(db, t) for t in templates]
 
 
+@router.get("/public", response_model=List[TemplateResponse])
+def list_public_templates(
+        db: Session = Depends(get_db)
+):
+    published_rows = db.query(PollTemplatePublished).filter(
+        PollTemplatePublished.is_public == True
+    ).all()
+    published_templates = []
+    for published in published_rows:
+        template = db.query(PollTemplate).filter(PollTemplate.id == published.original_poll_id).first()
+        if not template:
+            continue
+        published_templates.append(build_template_response(db, template))
+    return published_templates
+
+
 @router.post("/", response_model=TemplateResponse, status_code=status.HTTP_201_CREATED)
 def create_template(
         data: TemplateCreate,
@@ -138,8 +154,8 @@ def update_template(
     template = get_template(db, template_id)
     user = get_user(db, current_user)
     
-    if template.created_by != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can update this template")
+    if template.created_by != user.id and not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator or an admin can update this template")
     
     # Update template
     template.title = data.title
@@ -191,8 +207,8 @@ def delete_template(
     template = get_template(db, template_id)
     user = get_user(db, current_user)
 
-    if template.created_by != user.id:
-        raise  HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator can delete this template")
+    if template.created_by != user.id and not user.is_admin:
+        raise  HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator or an admin can delete this template")
 
     db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).delete()
     db.delete(template)

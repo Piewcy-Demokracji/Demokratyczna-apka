@@ -32,5 +32,22 @@
         Or go to your <a href="/profile">profile</a> to create a session with your option sets.
       </div>
     </section>
+
+    <section class="public-option-sets">
+      <h2>Public option sets</h2>
+      <div *ngIf="publicOptionSets.length === 0" class="no-public-sets">
+        <p>No public option sets are available at the moment.</p>
+      </div>
+      <div *ngFor="let set of publicOptionSets" class="option-set-card">
+        <div class="option-set-details">
+          <h4>{{ set.name }}</h4>
+          <p *ngIf="set.description">{{ set.description }}</p>
+          <small>{{ set.optionsCount }} options</small>
+        </div>
+        <div class="option-set-actions">
+          <button class="btn btn-primary" (click)="launchSet(set)">Launch</button>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
