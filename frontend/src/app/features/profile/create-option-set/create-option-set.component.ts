@@ -36,6 +36,10 @@ export class CreateOptionSetComponent implements OnInit {
     }
   }
 
+  trackByIndex(index: number, item: any): number {
+    return index;
+  }
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
