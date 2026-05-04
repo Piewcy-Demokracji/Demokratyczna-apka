@@ -2,8 +2,16 @@ import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { TemplateService, CreateTemplateRequest, Template } from '../../../core/services/template.service';
 import { AuthService } from '../../../core/services/auth.service';
+
+interface OptionItem {
+  text: string;
+  image_filename: string | null;
+  uploading: boolean;
+  uploadError: string | null;
+}
 
 @Component({
   selector: 'app-create-option-set',
@@ -13,12 +21,13 @@ import { AuthService } from '../../../core/services/auth.service';
   styleUrl: './create-option-set.component.css'
 })
 export class CreateOptionSetComponent implements OnInit {
-  optionSet: CreateTemplateRequest = {
+  optionSet = {
     title: '',
     description: '',
     can_be_public: false,
-    options: ['']
   };
+
+  options: OptionItem[] = [{ text: '', image_filename: null, uploading: false, uploadError: null }];
 
   isLoading = false;
   isEditing = false;
@@ -29,14 +38,15 @@ export class CreateOptionSetComponent implements OnInit {
     private templateService: TemplateService,
     private authService: AuthService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private http: HttpClient
   ) {
     if (!this.authService.isLoggedIn()) {
       this.router.navigate(['/login']);
     }
   }
 
-  trackByIndex(index: number, item: any): number {
+  trackByIndex(index: number): number {
     return index;
   }
 
@@ -56,36 +66,67 @@ export class CreateOptionSetComponent implements OnInit {
           title: template.title,
           description: template.description || '',
           can_be_public: template.can_be_public,
-          options: template.options.map(opt => opt.text)
         };
+        this.options = template.options.map(opt => ({
+          text: opt.text,
+          image_filename: (opt as any).image_filename || null,
+          uploading: false,
+          uploadError: null
+        }));
       },
-      error: (error) => {
-        console.error('Error loading template for editing:', error);
-        this.router.navigate(['/profile']);
-      }
+      error: () => this.router.navigate(['/profile'])
     });
   }
 
   addOption(): void {
-    this.optionSet.options.push('');
+    this.options.push({ text: '', image_filename: null, uploading: false, uploadError: null });
   }
 
   removeOption(index: number): void {
-    if (this.optionSet.options.length > 1) {
-      this.optionSet.options.splice(index, 1);
+    if (this.options.length > 1) {
+      this.deleteImage(this.options[index].image_filename);
+      this.options.splice(index, 1);
     }
   }
 
-  onOptionChange(index: number): void {
-    // No automatic adding of options - users must click "Add Option" button
+  onFileSelected(event: Event, index: number): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.deleteImage(this.options[index].image_filename);
+
+    this.options[index].uploading = true;
+    this.options[index].uploadError = null;
+
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    this.http.post<any>('http://localhost:8000/api/upload/', formData).subscribe({
+      next: (response) => {
+        this.options[index].image_filename = response.filename;
+        this.options[index].uploading = false;
+      },
+      error: (err) => {
+        this.options[index].uploadError = err?.error?.detail || 'Upload nie powiódł się';
+        this.options[index].uploading = false;
+      }
+    });
+  }
+
+  getImageUrl(filename: string | null): string | null {
+    return filename ? `http://localhost:8000/api/upload/${filename}` : null;
+  }
+
+  deleteImage(filename: string | null): void {
+    if (!filename) return;
+    this.http.delete(`http://localhost:8000/api/upload/${filename}`).subscribe();
   }
 
   onCanBePublicChange(nextValue: boolean): void {
     this.optionSet.can_be_public = nextValue;
 
-    if (!this.isEditing || !this.editingId || this.isSavingCanBePublic) {
-      return;
-    }
+    if (!this.isEditing || !this.editingId || this.isSavingCanBePublic) return;
 
     this.isSavingCanBePublic = true;
     this.templateService.updateTemplateCanBePublic(this.editingId, this.optionSet.can_be_public).subscribe({
@@ -93,8 +134,7 @@ export class CreateOptionSetComponent implements OnInit {
         this.optionSet.can_be_public = template.can_be_public;
         this.isSavingCanBePublic = false;
       },
-      error: (error) => {
-        console.error('Error updating can_be_public:', error);
+      error: () => {
         this.optionSet.can_be_public = !this.optionSet.can_be_public;
         this.isSavingCanBePublic = false;
       }
@@ -102,16 +142,10 @@ export class CreateOptionSetComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (!this.optionSet.title.trim()) {
-      return;
-    }
+    if (!this.optionSet.title.trim()) return;
 
-    // Filter out empty options
-    const validOptions = this.optionSet.options.filter(option => option.trim() !== '');
-
-    if (validOptions.length === 0) {
-      return;
-    }
+    const validOptions = this.options.filter(o => o.text.trim() !== '');
+    if (validOptions.length === 0) return;
 
     this.isLoading = true;
 
@@ -119,7 +153,7 @@ export class CreateOptionSetComponent implements OnInit {
       title: this.optionSet.title.trim(),
       description: this.optionSet.description?.trim() || undefined,
       can_be_public: this.optionSet.can_be_public,
-      options: validOptions
+      options: validOptions.map(o => o.text)
     };
 
     const operation = this.isEditing && this.editingId
@@ -127,13 +161,33 @@ export class CreateOptionSetComponent implements OnInit {
       : this.templateService.createTemplate(request);
 
     operation.subscribe({
-      next: () => {
-        this.router.navigate(['/profile']);
+      next: (savedTemplate) => {
+        if (this.isEditing || savedTemplate) {
+          const requests = savedTemplate.options
+            .map((opt, i) => {
+              const filename = validOptions[i]?.image_filename;
+              if (filename && opt.id) {
+                return this.http.patch(
+                  `http://localhost:8000/api/templates/${savedTemplate.id}/options/${opt.id}/image?filename=${filename}`,
+                  {}
+                );
+              }
+              return null;
+            })
+            .filter(r => r !== null);
+
+          if (requests.length > 0) {
+            let done = 0;
+            requests.forEach(r => r!.subscribe({
+              next: () => { if (++done === requests.length) this.router.navigate(['/profile']); },
+              error: () => { if (++done === requests.length) this.router.navigate(['/profile']); }
+            }));
+          } else {
+            this.router.navigate(['/profile']);
+          }
+        }
       },
-      error: (error) => {
-        console.error('Error saving option set:', error);
-        this.isLoading = false;
-      }
+      error: () => { this.isLoading = false; }
     });
   }
 

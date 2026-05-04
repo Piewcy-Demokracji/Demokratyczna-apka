@@ -31,6 +31,7 @@ from PIL import Image, ImageDraw, ImageFont
 import base64
 import io
 import platform
+import shutil, os
 
 router = APIRouter(prefix="/api/session", tags=["session"])
 
@@ -53,7 +54,7 @@ def generate_image_with_poll_results(poll: PollResponse) -> str:
     options_scored.sort(key=lambda x: x[1], reverse=True)
     
     image_width = max_name_length * 40 + 50
-    image_height = 400 #Add adjustable height once options with images are implemented
+    image_height = 400
     background_color = (134,0,21)
     font_color = (34,177,76)
 
@@ -94,7 +95,20 @@ def generate_image_with_poll_results(poll: PollResponse) -> str:
     results_img.save(buf, format='PNG')
     img_str = base64.b64encode(buf.getvalue()).decode('utf-8')
 
-    return img_str 
+    return img_str
+
+def copy_image_file(original_filename: str) -> str | None:
+    """Kopiuje plik obrazka i zwraca nową nazwę."""
+    if not original_filename:
+        return None
+    src = os.path.join("uploads", original_filename)
+    if not os.path.isfile(src):
+        return None
+    extension = original_filename.rsplit(".", 1)[-1] if "." in original_filename else "bin"
+    new_filename = f"{uuid.uuid4()}.{extension}"
+    dst = os.path.join("uploads", new_filename)
+    shutil.copy2(src, dst)
+    return new_filename
 
 def generate_session_code(db: Session) -> str:
     """
@@ -215,6 +229,7 @@ def get_poll_response(db: Session, poll: PollModel, session_id: int, current_use
                 rating_count=rating_count,
                 total_rating=total_rating,
                 user_rating=user_votes.get(str(option.id), 0),
+                image_filename=option.image_filename,
             )
         )
 
@@ -320,16 +335,28 @@ def create_session(
     db.commit()
     db.refresh(poll)
 
-    if session_request.options:
+    if session_request.options_with_images:
+        for opt in session_request.options_with_images:
+            copied_filename = copy_image_file(opt.image_filename)
+            db.add(PollOptionModel(
+                poll_id=poll.id,
+                text=opt.text,
+                image_filename=copied_filename
+            ))
+    elif session_request.options:
         for option_text in session_request.options:
             db.add(PollOptionModel(poll_id=poll.id, text=option_text))
-    # Create poll options from template or use defaults
     elif template:
         template_options = db.query(PollTemplateOption).filter(
             PollTemplateOption.template_id == template.id
         ).all()
         for template_option in template_options:
-            db.add(PollOptionModel(poll_id=poll.id, text=template_option.text))
+            copied_filename = copy_image_file(template_option.image_filename)
+            db.add(PollOptionModel(
+                poll_id=poll.id,
+                text=template_option.text,
+                image_filename=copied_filename
+            ))
     db.commit()
 
     return SessionCreateResponse(token=session.token, code=session.code, host=session.host_username)

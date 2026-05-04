@@ -17,7 +17,21 @@
         <div class="options-list">
           <div class="option-row" *ngFor="let opt of options; let i = index; trackBy: trackByIndex">
             <span class="num">{{ i + 1 }}.</span>
-            <input [(ngModel)]="options[i]" [name]="'opt' + i" placeholder="Opcja {{ i + 1 }}" />
+            <img
+              *ngIf="options[i].image_filename"
+              [src]="getImageUrl(options[i].image_filename)"
+              alt="Opcja {{ i + 1 }}"
+              style="width:40px; height:40px; object-fit:cover; border-radius:6px; margin-right:8px;">
+            <input [(ngModel)]="options[i].text" [name]="'opt' + i" placeholder="Opcja {{ i + 1 }}" />
+            <label class="btn-upload">
+              {{ options[i].uploading ? '...' : (options[i].image_filename ? '🖼' : '➕') }}
+              <input
+                type="file"
+                accept="image/*"
+                style="display:none"
+                (change)="onFileSelected($event, i)"
+                [disabled]="options[i].uploading">
+            </label>
             <button type="button" (click)="removeOption(i)" [disabled]="options.length <= 2" class="btn-remove">✕</button>
           </div>
         </div>

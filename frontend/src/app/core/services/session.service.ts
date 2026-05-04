@@ -6,6 +6,7 @@ export interface SessionCreateRequest {
   template_id?: number;
   duration_seconds?: number;
   options?: string[];
+  options_with_images?: { text: string; image_filename: string | null }[];
   voting_mode?: 'stars' | 'single';
 }
 
@@ -21,6 +22,7 @@ export interface PollOption {
   rating_count: number;
   total_rating: number;
   user_rating?: number;
+  image_filename?: string | null;
 }
 
 export interface Poll {
