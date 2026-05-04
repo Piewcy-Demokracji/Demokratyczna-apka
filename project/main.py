@@ -28,7 +28,7 @@ def create_default_admin_user() -> None:
 def create_dummy_template() -> None:
     db = SessionLocal()
     try:
-        existing = db.query(PollTemplate).filter(PollTemplate.id == -1).first()
+        existing = db.query(PollTemplate).filter(PollTemplate.id == 1).first()
         if not existing:
             dummy = PollTemplate(
                 id=1,
