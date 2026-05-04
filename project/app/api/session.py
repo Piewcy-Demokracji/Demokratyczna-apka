@@ -30,6 +30,7 @@ import json
 from PIL import Image, ImageDraw, ImageFont
 import base64
 import io
+import platform
 
 router = APIRouter(prefix="/api/session", tags=["session"])
 
@@ -58,7 +59,18 @@ def generate_image_with_poll_results(poll: PollResponse) -> str:
 
     results_img = Image.new("RGB", (image_width,image_height), color=background_color)
     d = ImageDraw.Draw(results_img)
-    font_size = 20 #Think about adjustable font size based on options max name length and image width once images are implemented
+    font_size = 20
+    
+    if platform.system() == 'Windows':
+        try:
+            font = ImageFont.truetype('C:\\Windows\\Fonts\\arial.ttf', font_size)
+        except OSError:
+            font = ImageFont.load_default()
+    else:
+        try:
+            font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', font_size)
+        except OSError:
+            font = ImageFont.load_default()
     
     row_modifier = 1
     column = 0 
@@ -70,7 +82,7 @@ def generate_image_with_poll_results(poll: PollResponse) -> str:
         d.text(( x , y ),
                 f"{i+1}. {option.name}: {final_score:.2f}",
                 fill=font_color,
-                font_size=font_size, 
+                font=font, 
                 stroke_width=1, 
                 stroke_fill=font_color)
         row_modifier += 1

@@ -131,6 +131,7 @@ export class SessionComponent implements OnInit, OnDestroy {
 
     this.sessionService.getSession(token).subscribe({
       next: response => {
+        this.handleSessionResponse(response);
         if (response.poll) {
           this.poll = {
             ...response.poll,
@@ -188,6 +189,7 @@ export class SessionComponent implements OnInit, OnDestroy {
     this.status = null;
     this.isHost = false;
     this.sessionPassword = null;
+    this.image_base64 = null;
   }
 
   private updateTimeFromPoll(): void {
@@ -270,6 +272,7 @@ export class SessionComponent implements OnInit, OnDestroy {
 
     this.sessionService.endPollEarly(this.sessionToken).subscribe({
       next: response => {
+        this.handleSessionResponse(response);
         if (response.poll) {
           this.poll = {
             ...response.poll,
