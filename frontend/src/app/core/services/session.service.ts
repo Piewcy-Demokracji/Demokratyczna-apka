@@ -6,6 +6,7 @@ export interface SessionCreateRequest {
   template_id?: number;
   duration_seconds?: number;
   options?: string[];
+  voting_mode?: 'stars' | 'single';
 }
 
 export interface SessionCreateResponse {
@@ -27,6 +28,7 @@ export interface Poll {
   title: string;
   duration_seconds: number;
   start_time: number;
+  voting_mode: 'stars' | 'single';
   options: PollOption[];
 }
 

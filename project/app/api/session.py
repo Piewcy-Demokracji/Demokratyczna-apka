@@ -80,7 +80,7 @@ def generate_image_with_poll_results(poll: PollResponse) -> str:
         x = 100 + max_name_length * 20 * column
         y = 30 + 50 * row_modifier
         d.text(( x , y ),
-                f"{i+1}. {option.name}: {final_score:.2f}",
+            f"{i+1}. {option.name}: {final_score:.2f}",
                 fill=font_color,
                 font=font, 
                 stroke_width=1, 
@@ -223,6 +223,7 @@ def get_poll_response(db: Session, poll: PollModel, session_id: int, current_use
         title=poll.title,
         duration_seconds=poll.duration_seconds,
         start_time=poll.start_time,
+        voting_mode=getattr(poll, "voting_mode", "stars"),
         options=options,
     )
 
@@ -312,6 +313,7 @@ def create_session(
         creator_id=user.id,
         session_id=session.id,
         duration_seconds=session_request.duration_seconds,
+        voting_mode=session_request.voting_mode if session_request.voting_mode in {"stars", "single"} else "stars",
         start_time=now,
     )
     db.add(poll)
@@ -470,29 +472,52 @@ def vote_on_option(token: str, vote: VoteRequest, db: Session = Depends(get_db),
     if vote.rating < 0 or vote.rating > 5:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Rating must be between 0 and 5")
 
+    is_single_choice = getattr(poll, "voting_mode", "stars") == "single"
+    if is_single_choice and vote.rating != 1:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Single-choice polls accept only one selected option")
+
     # Get user
     user = get_user_by_username(db, current_user)
 
-    # Check if user already voted on this option
-    existing_vote = db.query(VoteModel).filter(
+    existing_votes = db.query(VoteModel).filter(
         VoteModel.poll_id == poll.id,
-        VoteModel.option_id == vote.option_id,
-        VoteModel.user_id == user.id
-    ).first()
+        VoteModel.user_id == user.id,
+    ).all()
 
-    if existing_vote:
-        # Update existing vote
-        existing_vote.rating = vote.rating
-        existing_vote.updated_at = datetime.utcnow()
+    if is_single_choice:
+        for existing_vote in existing_votes:
+            if existing_vote.option_id != vote.option_id:
+                db.delete(existing_vote)
+
+        existing_vote = next((existing for existing in existing_votes if existing.option_id == vote.option_id), None)
+        if existing_vote:
+            existing_vote.rating = 1
+            existing_vote.updated_at = datetime.utcnow()
+        else:
+            new_vote = VoteModel(
+                poll_id=poll.id,
+                option_id=vote.option_id,
+                user_id=user.id,
+                rating=1,
+            )
+            db.add(new_vote)
     else:
-        # Create new vote
-        new_vote = VoteModel(
-            poll_id=poll.id,
-            option_id=vote.option_id,
-            user_id=user.id,
-            rating=vote.rating
-        )
-        db.add(new_vote)
+        # Check if user already voted on this option
+        existing_vote = next((existing for existing in existing_votes if existing.option_id == vote.option_id), None)
+
+        if existing_vote:
+            # Update existing vote
+            existing_vote.rating = vote.rating
+            existing_vote.updated_at = datetime.utcnow()
+        else:
+            # Create new vote
+            new_vote = VoteModel(
+                poll_id=poll.id,
+                option_id=vote.option_id,
+                user_id=user.id,
+                rating=vote.rating
+            )
+            db.add(new_vote)
 
     # Persist user's votes for this session to support reconnect/device switch.
     user_votes_row = db.query(SessionUserVotes).filter(
@@ -510,7 +535,10 @@ def vote_on_option(token: str, vote: VoteRequest, db: Session = Depends(get_db),
         except json.JSONDecodeError:
             votes_dict = {}
 
-    votes_dict[str(vote.option_id)] = vote.rating
+    if is_single_choice:
+        votes_dict = {str(vote.option_id): 1}
+    else:
+        votes_dict[str(vote.option_id)] = vote.rating
     user_votes_row.votes_json = json.dumps(votes_dict)
     user_votes_row.updated_at = datetime.utcnow()
 

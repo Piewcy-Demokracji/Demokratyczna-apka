@@ -13,9 +13,23 @@ export class SessionLauncherComponent implements OnInit {
   title = '';
   options: string[] = [];
   durationMinutes = 3;
+  votingMode: 'stars' | 'single' = 'stars';
   loading = true;
   launching = false;
   error = '';
+
+  votingModeOptions = [
+    {
+      value: 'stars' as const,
+      label: 'Gwiazdki',
+      description: 'Każdą opcję oceniasz osobno w skali 1-5.'
+    },
+    {
+      value: 'single' as const,
+      label: 'Jedna opcja',
+      description: 'Wybierasz tylko jedną opcję.'
+    }
+  ];
 
   presets = [
     { label: '1 min', value: 1 },
@@ -71,7 +85,8 @@ export class SessionLauncherComponent implements OnInit {
     this.sessionService.createSession({
       template_id: this.templateId,
       duration_seconds: this.durationMinutes * 60,
-      options: filled
+      options: filled,
+      voting_mode: this.votingMode
     }).subscribe({
       next: (res: SessionCreateResponse) => this.router.navigate(['/session', res.token]),
       error: () => { this.error = 'Nie udało się utworzyć sesji.'; this.launching = false; }

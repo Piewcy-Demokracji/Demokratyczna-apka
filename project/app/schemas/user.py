@@ -48,6 +48,7 @@ class PollResponse(BaseModel):
     title: str
     duration_seconds: int
     start_time: int
+    voting_mode: str = "stars"
     options: List[PollOptionResponse]
 
 
@@ -59,6 +60,7 @@ class SessionCreateRequest(BaseModel):
     template_id: Optional[int] = None
     duration_seconds: int = 180
     options: Optional[List[str]] = None
+    voting_mode: str = "stars"
 
 
 class SessionCreateResponse(BaseModel):

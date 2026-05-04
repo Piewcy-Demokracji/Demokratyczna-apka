@@ -18,6 +18,7 @@ interface Poll {
   title: string;
   duration_seconds: number;
   start_time: number;
+  voting_mode: 'stars' | 'single';
   options: PollOption[];
 }
 
@@ -246,17 +247,38 @@ export class SessionComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const totalVotes = this.isSingleChoiceMode()
+      ? this.poll.options.reduce((sum, option) => sum + (option.rating_count || 0), 0)
+      : 0;
+
     this.summaryOptions = this.poll.options
       .map(option => {
         const ratingCount = option.rating_count || 0;
         const totalRating = option.total_rating || 0;
-        const avg = ratingCount > 0 ? totalRating / ratingCount : 0;
+        const avg = this.isSingleChoiceMode()
+          ? (totalVotes > 0 ? Math.round((ratingCount / totalVotes) * 100) : 0)
+          : (ratingCount > 0 ? totalRating / ratingCount : 0);
         return {
           ...option,
           avg_rating: avg,
         } as PollOption & { avg_rating: number };
       })
       .sort((a, b) => ((b as any).avg_rating || 0) - ((a as any).avg_rating || 0));
+  }
+
+  isSingleChoiceMode(): boolean {
+    return this.poll?.voting_mode === 'single';
+  }
+
+  getSummaryPrimaryLabel(): string {
+    return this.isSingleChoiceMode() ? 'Percentage' : 'Average';
+  }
+
+  getSummaryPrimaryValue(option: PollOption): string {
+    const score = option.avg_rating || 0;
+    return this.isSingleChoiceMode()
+      ? `${Math.round(score)}%`
+      : score.toFixed(1);
   }
 
   formatTime(seconds: number): string {
@@ -298,9 +320,15 @@ export class SessionComponent implements OnInit, OnDestroy {
       return;
     }
 
-    option.userRating = star;
+    if (this.isSingleChoiceMode()) {
+      this.poll.options.forEach(candidate => {
+        candidate.userRating = candidate.id === option.id ? 1 : 0;
+      });
+    } else {
+      option.userRating = star;
+    }
 
-    this.sessionService.vote(this.sessionToken, option.id, star).subscribe({
+    this.sessionService.vote(this.sessionToken, option.id, this.isSingleChoiceMode() ? 1 : star).subscribe({
       next: () => {
         this.checkSession(this.sessionToken!);
       },

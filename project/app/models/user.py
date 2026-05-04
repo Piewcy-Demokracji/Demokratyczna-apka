@@ -26,6 +26,7 @@ class Poll(Base):
     creator_id = Column(Integer)
     session_id = Column(Integer, ForeignKey("sessions.id"), nullable=True, index=True)
     duration_seconds = Column(Integer, default=180)
+    voting_mode = Column(String, default="stars")
     start_time = Column(Integer, default=lambda: int(datetime.utcnow().timestamp()))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

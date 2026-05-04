@@ -5,9 +5,26 @@ from app.core.database import engine, SessionLocal
 from app.core.security import get_password_hash
 from app.api import auth, polls, session as session_api, templates
 from app.models.user import Base, User, PollTemplate
+from sqlalchemy import inspect, text
 
 
 Base.metadata.create_all(bind=engine)
+
+
+def ensure_poll_voting_mode_column() -> None:
+    inspector = inspect(engine)
+    if "polls" not in inspector.get_table_names():
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("polls")}
+    if "voting_mode" in columns:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE polls ADD COLUMN voting_mode VARCHAR(20) NOT NULL DEFAULT 'stars'"))
+
+
+ensure_poll_voting_mode_column()
 
 def create_default_admin_user() -> None:
     db = SessionLocal()

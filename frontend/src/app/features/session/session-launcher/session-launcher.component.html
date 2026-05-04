@@ -25,6 +25,21 @@
       </div>
 
       <div class="field">
+        <label>Tryb głosowania</label>
+        <div class="mode-toggle">
+          <button
+            type="button"
+            *ngFor="let mode of votingModeOptions"
+            class="mode-btn"
+            [class.active]="votingMode === mode.value"
+            (click)="votingMode = mode.value">
+            <span class="mode-title">{{ mode.label }}</span>
+            <span class="mode-description">{{ mode.description }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
         <label>Czas trwania</label>
         <div class="presets">
           <button type="button" *ngFor="let p of presets"
@@ -40,6 +55,7 @@
 
       <div class="summary">
         <strong>{{ title || '—' }}</strong> · {{ filledOptionsCount }} opcji · {{ durationMinutes }} min
+        · tryb: {{ votingMode === 'single' ? 'jedna opcja' : 'gwiazdki' }}
       </div>
 
       <div *ngIf="error" class="error-msg">{{ error }}</div>

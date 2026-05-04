@@ -41,6 +41,60 @@
   margin-bottom: 1rem;
 }
 
+.single-choice-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.single-choice-card:hover {
+  transform: translateY(-1px);
+  border-color: #cfd8dc;
+}
+
+.single-choice-card.selected {
+  background: #2c3e50;
+  border-color: #2c3e50;
+  color: white;
+}
+
+.single-choice-card.selected .option-name,
+.single-choice-card.selected .option-note {
+  color: white;
+}
+
+.option-copy {
+  flex: 1;
+}
+
+.option-name {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.option-note {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: #7f8c8d;
+}
+
+.single-choice-star {
+  font-size: 28px;
+  color: #bdc3c7;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.single-choice-star.active {
+  color: #f1c40f;
+  transform: scale(1.06);
+}
+
 .rate-meta {
   margin-top: 0.75rem;
   color: #7f8c8d;
