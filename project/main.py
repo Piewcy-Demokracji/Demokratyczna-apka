@@ -4,6 +4,7 @@ from app.models.user import Base, User
 from app.core.database import engine, SessionLocal
 from app.core.security import get_password_hash
 from app.api import auth, polls, session as session_api, templates
+from app.models.user import Base, User, PollTemplate
 
 
 Base.metadata.create_all(bind=engine)
@@ -24,8 +25,25 @@ def create_default_admin_user() -> None:
     finally:
         db.close()
 
+def create_dummy_template() -> None:
+    db = SessionLocal()
+    try:
+        existing = db.query(PollTemplate).filter(PollTemplate.id == -1).first()
+        if not existing:
+            dummy = PollTemplate(
+                id=1,
+                title="Domyślna pusta ankieta, nie edytowac",
+                description=None,
+                created_by=1,
+                can_be_public=False,
+            )
+            db.add(dummy)
+            db.commit()
+    finally:
+        db.close()
 
 create_default_admin_user()
+create_dummy_template()
 
 app = FastAPI(
     title="Voting App API",
