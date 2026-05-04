@@ -31,6 +31,13 @@
       <div *ngIf="isLoggedIn" class="session-note">
         Or go to your <a href="/profile">profile</a> to create a session with your option sets.
       </div>
+
+      <div *ngIf="isLoggedIn" style="margin-top: 1rem;">
+        <button class="btn btn-primary">
+          <a [routerLink]="['/session/launch', 1]" class="btn btn-primary">+ Pusta ankieta</a>
+        </button>
+      </div>
+
     </section>
 
     <section class="public-option-sets">
