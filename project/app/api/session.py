@@ -28,16 +28,18 @@ import string
 import uuid
 import json
 from PIL import Image, ImageDraw, ImageFont
+import base64
+import io
 
 router = APIRouter(prefix="/api/session", tags=["session"])
 
-def generate_image_with_poll_results(poll: PollResponse) -> Image.Image:
+def generate_image_with_poll_results(poll: PollResponse) -> str:
     """
         Generates an image with the poll results, showing the top 10 options based on their average rating.
 
         param poll: PollResponse - The poll containing the options and their ratings.
 
-        return: An image object with the poll results displayed.
+        return: An image as base64 string with the poll results displayed.
     """
     options_scored = []
     max_name_length = 0
@@ -76,7 +78,11 @@ def generate_image_with_poll_results(poll: PollResponse) -> Image.Image:
             column += 1
             row_modifier = 1
 
-    return results_img #Remember to close the image after sending it or better save it temporarily instead.
+    buf = io.BytesIO()
+    results_img.save(buf, format='PNG')
+    img_str = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+    return img_str 
 
 def generate_session_code(db: Session) -> str:
     """
@@ -367,7 +373,7 @@ def get_session(token: str, db: Session = Depends(get_db), current_user: str = D
     param db: Database session for querying.
     param current_user: The username of the currently authenticated user.
 
-    return: A SessionStatusResponse object containing the session token, host username, status (Host/Participant), and poll details if available.
+    return: A SessionStatusResponse object containing the session token, host username, status (Host/Participant), and poll details and image with results if available.
     """
     session = get_session_by_token(db, token)
     if not session:
@@ -386,6 +392,7 @@ def get_session(token: str, db: Session = Depends(get_db), current_user: str = D
     poll = get_poll_by_session(db, session.id)
     user = get_user_by_username(db, current_user)
     poll_data = get_poll_response(db, poll, session.id, user.id) if poll else None
+    img_str = generate_image_with_poll_results(poll_data) if is_poll_expired(poll) else None
 
     return SessionStatusResponse(
         token=session.token,
@@ -393,6 +400,7 @@ def get_session(token: str, db: Session = Depends(get_db), current_user: str = D
         host=session.host_username,
         status=status_value,
         poll=poll_data,
+        image_base64=img_str,     
     )
 
 
@@ -511,7 +519,7 @@ def end_poll_early(
     param db: Database session for querying and persisting data.
     param current_user: The username of the currently authenticated user.
     
-    return: A SessionStatusResponse object containing the session token, host username, status (Host), and poll details with final results.
+    return: A SessionStatusResponse object containing the session token, host username, status (Host), poll details and image with final results.
     """
     session = get_session_by_token(db, token)
     if not session:
@@ -534,6 +542,7 @@ def end_poll_early(
 
     user = get_user_by_username(db, current_user)
     poll_data = get_poll_response(db, poll, session.id, user.id)
+    img_str = generate_image_with_poll_results(poll_data) if is_poll_expired(poll) else None
 
     return SessionStatusResponse(
         token=session.token,
@@ -541,6 +550,7 @@ def end_poll_early(
         host=session.host_username,
         status="Host",
         poll=poll_data,
+        image_base64=img_str,
     )
 
 

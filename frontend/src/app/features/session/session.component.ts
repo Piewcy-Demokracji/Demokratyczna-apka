@@ -40,6 +40,7 @@ export class SessionComponent implements OnInit, OnDestroy {
   isComplete = false;
   summaryOptions: PollOption[] = [];
   message = '';
+  image_base64: string | null=null;
 
   private pollInterval: any;
 
@@ -149,6 +150,7 @@ export class SessionComponent implements OnInit, OnDestroy {
     this.sessionPassword = response.code ?? null;
     this.status = response.status;
     this.isHost = response.status === 'Host';
+    this.image_base64 = response.image_base64 ?? null;
   }
 
   private handleSessionEnded(): void {
@@ -317,6 +319,22 @@ export class SessionComponent implements OnInit, OnDestroy {
       return;
     }
     this.finishPolling();
+  }
+
+  downloadResults(): void {
+    if (!this.image_base64) {
+      return;
+    }
+    const pollTitle = this.poll?.title || 'results';
+    const sanitizedTitle = pollTitle.replace(/[\/\\:*?"<>|]/g, '_');
+    const fileName = `${sanitizedTitle}.png`;
+
+    const link = document.createElement('a');
+    link.href = `data:image/png;base64,${this.image_base64}`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 }
 

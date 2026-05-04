@@ -41,7 +41,8 @@
           <p>Votes: {{ option.rating_count }}</p>
         </div>
       </div>
-
+      
+      <button class="btn btn-primary" (click)="downloadResults()" [disabled]="!image_base64">Download results</button>
       <button class="btn btn-primary" (click)="goHome()">Back to home</button>
     </div>
   </div>

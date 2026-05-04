@@ -73,6 +73,7 @@ class SessionStatusResponse(BaseModel):
     status: str
     poll: Optional[PollResponse] = None
     code: Optional[str] = None
+    image_base64: Optional[str] = None
 
     class Config:
         from_attributes = True

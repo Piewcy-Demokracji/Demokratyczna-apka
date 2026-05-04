@@ -36,6 +36,7 @@ export interface SessionStatusResponse {
   status: 'Host' | 'Participant';
   poll?: Poll;
   code?: string;
+  image_base64?: string | null;
 }
 
 @Injectable({
