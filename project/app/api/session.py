@@ -58,7 +58,7 @@ def generate_image_with_poll_results(poll: PollResponse) -> str:
 
     results_img = Image.new("RGB", (image_width,image_height), color=background_color)
     d = ImageDraw.Draw(results_img)
-    font = ImageFont.truetype("arial.ttf", 20) #Think about adjustable font size based on options max name length and image width once images are implemented
+    font_size = 20 #Think about adjustable font size based on options max name length and image width once images are implemented
     
     row_modifier = 1
     column = 0 
@@ -70,7 +70,7 @@ def generate_image_with_poll_results(poll: PollResponse) -> str:
         d.text(( x , y ),
                 f"{i+1}. {option.name}: {final_score:.2f}",
                 fill=font_color,
-                font=font, 
+                font_size=font_size, 
                 stroke_width=1, 
                 stroke_fill=font_color)
         row_modifier += 1
