@@ -384,6 +384,7 @@ def publish_template(
     ).all()
     
     for option in options:
+        copied_image = copy_image_for_session(option.image_path)
         db.add(PollTemplatePublishedOption(
             published_template_id=published.id,
             text=option.text,

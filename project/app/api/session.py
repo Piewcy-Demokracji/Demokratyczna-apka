@@ -286,7 +286,6 @@ def create_session(
     current_user: str = Depends(get_current_user)
 ):
     """
-    Endpoint to create a new session.
     Endpoint to create a new session. Per-option images coming from the template
     or from the request payload are physically copied so the session owns its own
     files and is decoupled from later edits to the source template.
