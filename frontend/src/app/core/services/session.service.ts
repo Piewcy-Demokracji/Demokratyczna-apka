@@ -2,10 +2,15 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export interface SessionOptionInput {
+  text: string;
+  image_path?: string | null;
+}
+
 export interface SessionCreateRequest {
   template_id?: number;
   duration_seconds?: number;
-  options?: string[];
+  options?: SessionOptionInput[] | string[];
   voting_mode?: 'stars' | 'single';
 }
 
@@ -21,6 +26,7 @@ export interface PollOption {
   rating_count: number;
   total_rating: number;
   user_rating?: number;
+  image_path?: string | null;
 }
 
 export interface Poll {

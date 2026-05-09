@@ -5,6 +5,12 @@ import { Observable } from 'rxjs';
 export interface TemplateOption {
   id: number;
   text: string;
+  image_path?: string | null;
+}
+
+export interface TemplateOptionInput {
+  text: string;
+  image_path?: string | null;
 }
 
 export interface Template {
@@ -22,7 +28,7 @@ export interface CreateTemplateRequest {
   title: string;
   description?: string;
   can_be_public: boolean;
-  options: string[];
+  options: TemplateOptionInput[];
 }
 
 @Injectable({

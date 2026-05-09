@@ -2,8 +2,15 @@ import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { TemplateService, CreateTemplateRequest, Template } from '../../../core/services/template.service';
+import { TemplateService, CreateTemplateRequest, Template, TemplateOptionInput } from '../../../core/services/template.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { UploadService } from '../../../core/services/upload.service';
+
+interface OptionDraft {
+  text: string;
+  image_path: string | null;
+  uploading?: boolean;
+}
 
 @Component({
   selector: 'app-create-option-set',
@@ -13,21 +20,21 @@ import { AuthService } from '../../../core/services/auth.service';
   styleUrl: './create-option-set.component.css'
 })
 export class CreateOptionSetComponent implements OnInit {
-  optionSet: CreateTemplateRequest = {
-    title: '',
-    description: '',
-    can_be_public: false,
-    options: ['']
-  };
+  title = '';
+  description = '';
+  canBePublic = false;
+  options: OptionDraft[] = [{ text: '', image_path: null }];
 
   isLoading = false;
   isEditing = false;
   editingId: number | null = null;
   isSavingCanBePublic = false;
+  uploadError: string | null = null;
 
   constructor(
     private templateService: TemplateService,
     private authService: AuthService,
+    private uploadService: UploadService,
     private router: Router,
     private route: ActivatedRoute
   ) {
@@ -52,12 +59,15 @@ export class CreateOptionSetComponent implements OnInit {
   loadTemplateForEditing(id: number): void {
     this.templateService.getTemplate(id).subscribe({
       next: (template: Template) => {
-        this.optionSet = {
-          title: template.title,
-          description: template.description || '',
-          can_be_public: template.can_be_public,
-          options: template.options.map(opt => opt.text)
-        };
+        this.title = template.title;
+        this.description = template.description || '';
+        this.canBePublic = template.can_be_public;
+        this.options = template.options.length > 0
+          ? template.options.map(opt => ({
+              text: opt.text,
+              image_path: opt.image_path ?? null
+            }))
+          : [{ text: '', image_path: null }];
       },
       error: (error) => {
         console.error('Error loading template for editing:', error);
@@ -67,47 +77,85 @@ export class CreateOptionSetComponent implements OnInit {
   }
 
   addOption(): void {
-    this.optionSet.options.push('');
+    this.options.push({ text: '', image_path: null });
   }
 
   removeOption(index: number): void {
-    if (this.optionSet.options.length > 1) {
-      this.optionSet.options.splice(index, 1);
+    if (this.options.length > 1) {
+      this.options.splice(index, 1);
     }
   }
 
-  onOptionChange(index: number): void {
-    // No automatic adding of options - users must click "Add Option" button
+  getImageUrl(path: string | null): string | null {
+    return this.uploadService.getImageUrl(path);
+  }
+
+  onImageSelected(event: Event, index: number): void {
+    this.uploadError = null;
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+    const file = input.files[0];
+    const validationError = this.uploadService.validateFile(file);
+    if (validationError) {
+      this.uploadError = validationError;
+      input.value = '';
+      return;
+    }
+
+    this.options[index].uploading = true;
+    this.uploadService.uploadImage(file).subscribe({
+      next: (response: { image_path: string }) => {
+        this.options[index].image_path = response.image_path;
+        this.options[index].uploading = false;
+        input.value = '';
+      },
+      error: (err: unknown) => {
+        console.error('Error uploading image:', err);
+        this.uploadError = 'Nie udało się wgrać obrazka.';
+        this.options[index].uploading = false;
+        input.value = '';
+      }
+    });
+  }
+
+  removeImage(index: number): void {
+    this.options[index].image_path = null;
   }
 
   onCanBePublicChange(nextValue: boolean): void {
-    this.optionSet.can_be_public = nextValue;
+    this.canBePublic = nextValue;
 
     if (!this.isEditing || !this.editingId || this.isSavingCanBePublic) {
       return;
     }
 
     this.isSavingCanBePublic = true;
-    this.templateService.updateTemplateCanBePublic(this.editingId, this.optionSet.can_be_public).subscribe({
+    this.templateService.updateTemplateCanBePublic(this.editingId, this.canBePublic).subscribe({
       next: (template) => {
-        this.optionSet.can_be_public = template.can_be_public;
+        this.canBePublic = template.can_be_public;
         this.isSavingCanBePublic = false;
       },
       error: (error) => {
         console.error('Error updating can_be_public:', error);
-        this.optionSet.can_be_public = !this.optionSet.can_be_public;
+        this.canBePublic = !this.canBePublic;
         this.isSavingCanBePublic = false;
       }
     });
   }
 
   onSubmit(): void {
-    if (!this.optionSet.title.trim()) {
+    if (!this.title.trim()) {
       return;
     }
 
-    // Filter out empty options
-    const validOptions = this.optionSet.options.filter(option => option.trim() !== '');
+    const validOptions: TemplateOptionInput[] = this.options
+      .filter(opt => opt.text.trim() !== '')
+      .map(opt => ({
+        text: opt.text.trim(),
+        image_path: opt.image_path
+      }));
 
     if (validOptions.length === 0) {
       return;
@@ -116,9 +164,9 @@ export class CreateOptionSetComponent implements OnInit {
     this.isLoading = true;
 
     const request: CreateTemplateRequest = {
-      title: this.optionSet.title.trim(),
-      description: this.optionSet.description?.trim() || undefined,
-      can_be_public: this.optionSet.can_be_public,
+      title: this.title.trim(),
+      description: this.description?.trim() || undefined,
+      can_be_public: this.canBePublic,
       options: validOptions
     };
 

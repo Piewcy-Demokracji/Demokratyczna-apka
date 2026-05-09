@@ -11,12 +11,12 @@
         type="text"
         id="title"
         name="title"
-        [(ngModel)]="optionSet.title"
+        [(ngModel)]="title"
         required
-        #title="ngModel"
+        #titleField="ngModel"
         class="form-control"
         placeholder="e.g., Coffee Shops, Study Spots">
-      <div *ngIf="title.invalid && title.touched" class="error-message">
+      <div *ngIf="titleField.invalid && titleField.touched" class="error-message">
         Title is required
       </div>
     </div>
@@ -26,7 +26,7 @@
       <textarea
         id="description"
         name="description"
-        [(ngModel)]="optionSet.description"
+        [(ngModel)]="description"
         class="form-control"
         placeholder="Describe what this option set is for..."
         rows="3"></textarea>
@@ -34,11 +34,30 @@
 
     <div class="form-group">
       <label>Options</label>
+      <div *ngIf="uploadError" class="error-message upload-error">{{ uploadError }}</div>
       <div class="options-list">
-        <div *ngFor="let option of optionSet.options; let i = index; trackBy: trackByIndex" class="option-item">
+        <div *ngFor="let option of options; let i = index; trackBy: trackByIndex" class="option-item">
+          <div class="option-image-slot">
+            <ng-container *ngIf="option.image_path; else noImageTpl">
+              <img [src]="getImageUrl(option.image_path)" alt="Option image" class="option-thumb" />
+              <button type="button" class="remove-image-btn" (click)="removeImage(i)" title="Usuń obrazek">×</button>
+            </ng-container>
+            <ng-template #noImageTpl>
+              <label class="upload-label" [class.uploading]="option.uploading">
+                <span *ngIf="!option.uploading">📷</span>
+                <span *ngIf="option.uploading" class="upload-spinner">…</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
+                  [name]="'file-' + i"
+                  (change)="onImageSelected($event, i)"
+                  hidden>
+              </label>
+            </ng-template>
+          </div>
           <input
             type="text"
-            [(ngModel)]="optionSet.options[i]"
+            [(ngModel)]="options[i].text"
             [name]="'option-' + i"
             class="form-control option-input"
             placeholder="Enter option text">
@@ -46,7 +65,7 @@
             type="button"
             class="btn btn-danger btn-sm remove-option"
             (click)="removeOption(i)"
-            [disabled]="optionSet.options.length <= 1">
+            [disabled]="options.length <= 1">
             ×
           </button>
         </div>
@@ -62,7 +81,7 @@
           type="checkbox"
           name="canBePublic"
           (ngModelChange)="onCanBePublicChange($event)"
-          [(ngModel)]="optionSet.can_be_public">
+          [(ngModel)]="canBePublic">
         Allow admins to publish this set for other users
       </label>
     </div>
@@ -71,7 +90,7 @@
       <button
         type="submit"
         class="btn btn-primary"
-        [disabled]="!optionSetForm.form.valid || optionSet.options.length === 0 || isLoading">
+        [disabled]="!optionSetForm.form.valid || options.length === 0 || isLoading">
         {{ isLoading ? 'Saving...' : (isEditing ? 'Update Option Set' : 'Create Option Set') }}
       </button>
       <button type="button" class="btn btn-secondary" (click)="goBack()">Cancel</button>
