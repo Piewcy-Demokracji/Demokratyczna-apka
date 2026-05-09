@@ -1,23 +1,33 @@
 .launcher-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f5f5f5; padding: 1rem; }
-.launcher-card { background: white; border-radius: 12px; padding: 2rem; width: 100%; max-width: 480px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+.launcher-card { background: white; border-radius: 12px; padding: 2rem; width: 100%; max-width: 520px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
 .back-link { font-size: 0.85rem; color: #7f8c8d; text-decoration: none; display: inline-block; margin-bottom: 1.25rem; }
 .back-link:hover { color: #2c3e50; }
 h1 { font-size: 1.4rem; margin-bottom: 1.5rem; color: #2c3e50; }
 .field { margin-bottom: 1.5rem; }
 .field > label { display: block; font-weight: 500; font-size: 0.875rem; margin-bottom: 0.6rem; color: #2c3e50; }
-.field > input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; }
+.field > input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; box-sizing: border-box; }
 .field > input:focus { outline: none; border-color: #3498db; }
 .options-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
 .option-row { display: flex; align-items: center; gap: 0.5rem; }
 .num { color: #bdc3c7; width: 20px; font-size: 0.85rem; flex-shrink: 0; }
-.option-row input { flex: 1; padding: 0.45rem 0.7rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; }
+.option-row input { flex: 1; padding: 0.45rem 0.7rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; min-width: 0; }
+.upload-error { color: #e74c3c; font-size: 0.82rem; margin-bottom: 0.5rem; }
+.option-image-slot { position: relative; width: 48px; height: 48px; flex-shrink: 0; }
+.option-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; display: block; }
+.remove-img-btn { position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; border-radius: 50%; border: none; background: #e74c3c; color: white; font-size: 12px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+.remove-img-btn:hover { background: #c0392b; }
+.upload-label { width: 48px; height: 48px; border: 1px dashed #ccc; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; color: #999; background: #fafafa; transition: border-color 0.15s, color 0.15s; }
+.upload-label:hover { border-color: #3498db; color: #3498db; }
+.upload-label.uploading { pointer-events: none; opacity: 0.6; }
+.upload-spinner { font-size: 20px; animation: pulse 1s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 .mode-toggle { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
 .mode-btn { text-align: left; border: 1px solid #ddd; border-radius: 12px; padding: 0.9rem 1rem; background: white; cursor: pointer; display: flex; flex-direction: column; gap: 0.25rem; }
-.mode-btn.active { border-color: #3498db; background: #ebf5fb; box-shadow: inset 0 0 0 1px rgba(52, 152, 219, 0.18); }
+.mode-btn.active { border-color: #3498db; background: #ebf5fb; box-shadow: inset 0 0 0 1px rgba(52,152,219,0.18); }
 .mode-btn:hover:not(.active) { border-color: #3498db; }
 .mode-title { font-weight: 600; color: #2c3e50; }
 .mode-description { font-size: 0.82rem; color: #7f8c8d; line-height: 1.35; }
-.btn-remove { border: 1px solid #eee; border-radius: 6px; padding: 0.35rem 0.6rem; color: #bdc3c7; cursor: pointer; background: none; }
+.btn-remove { border: 1px solid #eee; border-radius: 6px; padding: 0.35rem 0.6rem; color: #bdc3c7; cursor: pointer; background: none; flex-shrink: 0; }
 .btn-remove:hover:not(:disabled) { border-color: #e74c3c; color: #e74c3c; }
 .btn-remove:disabled { opacity: 0.3; cursor: not-allowed; }
 .btn-add { border: 1px dashed #ddd; border-radius: 6px; padding: 0.4rem 1rem; color: #7f8c8d; cursor: pointer; background: none; font-size: 0.85rem; }
@@ -34,7 +44,4 @@ h1 { font-size: 1.4rem; margin-bottom: 1.5rem; color: #2c3e50; }
 .btn-primary:hover:not(:disabled) { background: #2980b9; }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .loading { text-align: center; color: #7f8c8d; padding: 2rem; }
-
-@media (max-width: 640px) {
-	.mode-toggle { grid-template-columns: 1fr; }
-}
+@media (max-width: 640px) { .mode-toggle { grid-template-columns: 1fr; } }

@@ -14,10 +14,31 @@
 
       <div class="field">
         <label>Opcje</label>
+        <div *ngIf="uploadError" class="upload-error">{{ uploadError }}</div>
         <div class="options-list">
           <div class="option-row" *ngFor="let opt of options; let i = index; trackBy: trackByIndex">
             <span class="num">{{ i + 1 }}.</span>
-            <input [(ngModel)]="options[i]" [name]="'opt' + i" placeholder="Opcja {{ i + 1 }}" />
+
+            <div class="option-image-slot">
+              <ng-container *ngIf="opt.image_path; else noImgTpl">
+                <img [src]="getImageUrl(opt.image_path)" alt="Zdjęcie opcji" class="option-thumb" />
+                <button type="button" class="remove-img-btn" (click)="removeImage(i)" title="Usuń zdjęcie">×</button>
+              </ng-container>
+              <ng-template #noImgTpl>
+                <label class="upload-label" [class.uploading]="opt.uploading">
+                  <span *ngIf="!opt.uploading">📷</span>
+                  <span *ngIf="opt.uploading" class="upload-spinner">…</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
+                    [name]="'img-' + i"
+                    (change)="onImageSelected($event, i)"
+                    hidden>
+                </label>
+              </ng-template>
+            </div>
+
+            <input [(ngModel)]="options[i].text" [name]="'opt' + i" placeholder="Opcja {{ i + 1 }}" />
             <button type="button" (click)="removeOption(i)" [disabled]="options.length <= 2" class="btn-remove">✕</button>
           </div>
         </div>

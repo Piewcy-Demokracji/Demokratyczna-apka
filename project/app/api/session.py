@@ -22,7 +22,7 @@ from app.schemas.user import (
     SessionCreateRequest,
     SessionOptionInput,
 )
-from app.api.upload import validate_image_path, copy_image_for_session
+from app.api.upload import validate_image_path, copy_image_for_session, safe_delete_image
 from typing import Optional, Union
 import random
 from datetime import datetime
@@ -113,6 +113,7 @@ def generate_session_code(db: Session) -> str:
 
     return: A unique session code.
     """
+def generate_session_code(db: Session) -> str:
     allowed = string.ascii_uppercase + string.digits
     for _ in range(20):
         code = ''.join(random.choice(allowed) for _ in range(6))
@@ -286,17 +287,12 @@ def create_session(
 ):
     """
     Endpoint to create a new session.
-
-    param session_request: The request body containing optional template ID, duration, and options for the poll.
-    param db: Database session for querying and persisting data.
-    param current_user: The username of the currently authenticated user.
-
-    return: A SessionCreateResponse object containing the session token, code and host username.
+    Endpoint to create a new session. Per-option images coming from the template
+    or from the request payload are physically copied so the session owns its own
+    files and is decoupled from later edits to the source template.
     """
-    # Get user
     user = get_user_by_username(db, current_user)
 
-    # Create session
     code = generate_session_code(db)
     token = generate_session_token(db)
     session = SessionModel(code=code, token=token, host_username=current_user)
@@ -304,10 +300,8 @@ def create_session(
     db.commit()
     db.refresh(session)
 
-    # Create poll for this session
     now = int(datetime.utcnow().timestamp())
-    
-    # Get template if provided
+
     template = None
     if session_request.template_id:
         template = db.query(PollTemplate).filter(PollTemplate.id == session_request.template_id).first()
@@ -386,7 +380,6 @@ def join_session(
     else:
         status_value = "Host"
 
-    # Get the actual poll for this session
     poll = get_poll_by_session(db, session.id)
     user = get_user_by_username(db, current_user)
     poll_data = get_poll_response(db, poll, session.id, user.id) if poll else None
@@ -421,7 +414,6 @@ def get_session(token: str, db: Session = Depends(get_db), current_user: str = D
         status_value = "Participant"
     else:
         status_value = "Host"
-        response_code = session.code
 
     # Get the actual poll for this session
     poll = get_poll_by_session(db, session.id)
@@ -661,12 +653,18 @@ def delete_session(token: str, db: Session = Depends(get_db), current_user: str 
 
     poll = get_poll_by_session(db, session.id)
     if poll:
+        # Collect image paths before deletion
+        poll_options = db.query(PollOptionModel).filter(PollOptionModel.poll_id == poll.id).all()
+        option_image_paths = [opt.image_path for opt in poll_options if opt.image_path]
+
         db.query(VoteModel).filter(VoteModel.poll_id == poll.id).delete()
         db.query(PollOptionModel).filter(PollOptionModel.poll_id == poll.id).delete()
         db.delete(poll)
 
-    db.query(SessionUserVotes).filter(SessionUserVotes.session_id == session.id).delete()
+        for path in option_image_paths:
+            safe_delete_image(path)
 
+    db.query(SessionUserVotes).filter(SessionUserVotes.session_id == session.id).delete()
     db.query(SessionParticipant).filter(SessionParticipant.session_id == session.id).delete()
     db.delete(session)
     db.commit()

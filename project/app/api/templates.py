@@ -11,7 +11,7 @@ from typing import List, Optional, Union
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.deps import get_user
-from app.api.upload import validate_image_path
+from app.api.upload import validate_image_path, copy_image_for_session, safe_delete_image
 
 router = APIRouter(prefix="/api/templates", tags=["templates"])
 
@@ -22,19 +22,14 @@ def _normalize_option(raw: Union[TemplateOptionInput, str]) -> TemplateOptionInp
     return raw
 
 
-def get_template(
-        db: Session,
-        template_id: int
-):
+def get_template(db: Session, template_id: int):
     template = db.query(PollTemplate).filter(PollTemplate.id == template_id).first()
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
     return template
 
-def build_template_response(
-        db: Session,
-        template: PollTemplate
-):
+
+def build_template_response(db: Session, template: PollTemplate):
     options = (
         db.query(PollTemplateOption)
         .filter(PollTemplateOption.template_id == template.id)
@@ -50,10 +45,7 @@ def build_template_response(
     )
 
 
-def build_admin_template_review_response(
-        db: Session,
-        template: PollTemplate
-):
+def build_admin_template_review_response(db: Session, template: PollTemplate):
     creator = db.query(User).filter(User.id == template.created_by).first()
     published = db.query(PollTemplatePublished).filter(
         PollTemplatePublished.original_poll_id == template.id
@@ -98,9 +90,7 @@ def list_public_templates(
 
 
 @router.get("/public", response_model=List[TemplateResponse])
-def list_public_templates(
-        db: Session = Depends(get_db)
-):
+def list_public_templates_public(db: Session = Depends(get_db)):
     published_rows = db.query(PollTemplatePublished).filter(
         PollTemplatePublished.is_public == True
     ).all()
@@ -172,6 +162,14 @@ def update_template(
     template.description = data.description
     template.can_be_public = data.can_be_public
 
+    old_options = db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).all()
+    old_image_paths = [opt.image_path for opt in old_options if opt.image_path]
+    new_image_paths = {
+        _normalize_option(raw).image_path
+        for raw in data.options
+        if _normalize_option(raw).image_path
+    }
+
     db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).delete()
 
     for raw_option in data.options:
@@ -186,6 +184,10 @@ def update_template(
     db.commit()
     db.refresh(template)
     
+    for path in old_image_paths:
+        if path not in new_image_paths:
+            safe_delete_image(path)
+
     return build_template_response(db, template)
 
 
@@ -221,9 +223,16 @@ def delete_template(
     if template.created_by != user.id and not user.is_admin:
         raise  HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator or an admin can delete this template")
 
+    # Collect image paths before deletion
+    old_options = db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).all()
+    old_image_paths = [opt.image_path for opt in old_options if opt.image_path]
+
     db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).delete()
     db.delete(template)
     db.commit()
+
+    for path in old_image_paths:
+        safe_delete_image(path)
 
 
 @router.get("/admin/review", response_model=List[AdminTemplateReviewResponse])
@@ -292,10 +301,11 @@ def publish_template_from_admin_review(
     ).all()
 
     for option in options:
+        copied_image = copy_image_for_session(option.image_path)
         db.add(PollTemplatePublishedOption(
             published_template_id=published.id,
             text=option.text,
-            image_path=option.image_path,
+            image_path=copied_image,
         ))
 
     db.commit()
@@ -319,13 +329,20 @@ def reject_template_from_admin_review(
         PollTemplatePublished.original_poll_id == template.id
     ).all()
     for published in published_rows:
+        pub_options = db.query(PollTemplatePublishedOption).filter(
+            PollTemplatePublishedOption.published_template_id == published.id
+        ).all()
+        pub_image_paths = [o.image_path for o in pub_options if o.image_path]
+
         db.query(PollTemplatePublishedOption).filter(
             PollTemplatePublishedOption.published_template_id == published.id
         ).delete()
         db.delete(published)
 
-    db.commit()
+        for path in pub_image_paths:
+            safe_delete_image(path)
 
+    db.commit()
     return {"message": "Template rejected and removed from publication queue and published tables"}
 
 
@@ -370,7 +387,7 @@ def publish_template(
         db.add(PollTemplatePublishedOption(
             published_template_id=published.id,
             text=option.text,
-            image_path=option.image_path,
+            image_path=copied_image,
         ))
     
     db.commit()

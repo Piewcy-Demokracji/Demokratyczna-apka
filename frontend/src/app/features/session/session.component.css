@@ -32,13 +32,21 @@
   margin-top: 1.5rem;
 }
 
-.option-card,
-.summary-card {
+.option-card {
   background: #fafafa;
   border: 1px solid #e8e8e8;
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
+}
+
+.option-img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  display: block;
 }
 
 .single-choice-card {
@@ -49,6 +57,17 @@
   text-align: left;
   cursor: pointer;
   transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  flex-wrap: wrap;
+}
+
+.single-choice-card .option-img {
+  width: 80px;
+  height: 80px;
+  max-height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 
 .single-choice-card:hover {
@@ -95,11 +114,6 @@
   transform: scale(1.06);
 }
 
-.rate-meta {
-  margin-top: 0.75rem;
-  color: #7f8c8d;
-}
-
 .star-bar {
   margin-top: 0.75rem;
 }
@@ -114,6 +128,46 @@
 
 .star.active {
   color: #f1c40f;
+}
+
+.summary-card {
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.summary-img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.summary-text {
+  flex: 1;
+}
+
+.summary-text h3 {
+  margin: 0 0 0.4rem 0;
+  color: #2c3e50;
+}
+
+.summary-text p {
+  margin: 0.2rem 0;
+  color: #4a4a4a;
+}
+
+.bottom-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .btn {
@@ -132,6 +186,11 @@
 
 .btn-primary:hover:not(:disabled) {
   background-color: #2980b9;
+}
+
+.btn-primary:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
 }
 
 .btn-secondary {
@@ -161,4 +220,3 @@
   color: #856404;
   border: 1px solid #ffeeba;
 }
-

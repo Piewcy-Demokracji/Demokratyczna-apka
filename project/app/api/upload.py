@@ -20,6 +20,10 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 def validate_image_path(image_path: Optional[str]) -> Optional[str]:
+    """
+    Validates an image path coming from the client and returns a sanitized version.
+    Returns None for empty input. Raises HTTP 400 on path traversal or missing file.
+    """
     if not image_path:
         return None
 
@@ -44,6 +48,11 @@ def validate_image_path(image_path: Optional[str]) -> Optional[str]:
 
 
 def copy_image_for_session(source_path: Optional[str]) -> Optional[str]:
+    """
+    Creates a session-owned copy of an image so that subsequent edits to the
+    source (e.g. template option) do not affect the session/poll snapshot.
+    Returns None if the source is missing or unset.
+    """
     if not source_path:
         return None
     if not os.path.isfile(source_path):
@@ -54,6 +63,20 @@ def copy_image_for_session(source_path: Optional[str]) -> Optional[str]:
     new_path = os.path.join(UPLOAD_DIR, new_filename)
     shutil.copyfile(source_path, new_path)
     return new_path.replace("\\", "/")
+
+
+def safe_delete_image(image_path: Optional[str]) -> None:
+    """
+    Deletes an image file from disk if it exists.
+    Silently ignores missing files or empty paths.
+    """
+    if not image_path:
+        return
+    try:
+        if os.path.isfile(image_path):
+            os.remove(image_path)
+    except OSError:
+        pass
 
 
 def _validate_and_open(content: bytes) -> Image.Image:
@@ -85,6 +108,12 @@ async def upload_image(
     file: UploadFile = File(...),
     current_user: str = Depends(get_current_user),
 ):
+    """
+    Upload an image (JPEG/PNG/GIF/WEBP/BMP) to be referenced as image_path
+    in template options or session option overrides.
+
+    Returns: {"image_path": "uploads/<uuid>.png"}
+    """
     content = await file.read()
     img = _validate_and_open(content)
 

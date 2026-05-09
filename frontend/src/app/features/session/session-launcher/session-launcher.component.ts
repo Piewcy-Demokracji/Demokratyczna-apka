@@ -1,7 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TemplateService, Template } from '../../../core/services/template.service';
-import { SessionService, SessionCreateResponse } from '../../../core/services/session.service';
+import { SessionService, SessionCreateResponse, SessionOptionInput } from '../../../core/services/session.service';
+import { UploadService } from '../../../core/services/upload.service';
+
+interface OptionDraft {
+  text: string;
+  image_path: string | null;
+  uploading?: boolean;
+}
 
 @Component({
   selector: 'app-session-launcher',
@@ -11,12 +18,13 @@ import { SessionService, SessionCreateResponse } from '../../../core/services/se
 export class SessionLauncherComponent implements OnInit {
   templateId!: number;
   title = '';
-  options: string[] = [];
+  options: OptionDraft[] = [];
   durationMinutes = 3;
   votingMode: 'stars' | 'single' = 'stars';
   loading = true;
   launching = false;
   error = '';
+  uploadError = '';
 
   votingModeOptions = [
     {
@@ -37,15 +45,17 @@ export class SessionLauncherComponent implements OnInit {
     { label: '5 min', value: 5 },
     { label: '10 min', value: 10 },
   ];
+
   get filledOptionsCount(): number {
-    return this.options.filter(o => o.trim().length > 0).length;
+    return this.options.filter(o => o.text.trim().length > 0).length;
   }
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private templateService: TemplateService,
-    private sessionService: SessionService
+    private sessionService: SessionService,
+    private uploadService: UploadService,
   ) {}
 
   ngOnInit(): void {
@@ -53,7 +63,10 @@ export class SessionLauncherComponent implements OnInit {
     this.templateService.getTemplate(this.templateId).subscribe({
       next: (t: Template) => {
         this.title = t.title;
-        this.options = t.options.map(o => o.text);
+        this.options = t.options.map(o => ({
+          text: o.text,
+          image_path: o.image_path ?? null,
+        }));
         this.loading = false;
       },
       error: () => {
@@ -63,16 +76,59 @@ export class SessionLauncherComponent implements OnInit {
     });
   }
 
-  addOption(): void { this.options.push(''); }
+  addOption(): void {
+    this.options.push({ text: '', image_path: null });
+  }
 
   removeOption(index: number): void {
-    if (this.options.length > 2) this.options.splice(index, 1);
+    if (this.options.length > 2) {
+      this.options.splice(index, 1);
+    }
   }
 
   trackByIndex(i: number): number { return i; }
 
+  getImageUrl(path: string | null): string | null {
+    return this.uploadService.getImageUrl(path);
+  }
+
+  onImageSelected(event: Event, index: number): void {
+    this.uploadError = '';
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) { return; }
+    const file = input.files[0];
+    const validationError = this.uploadService.validateFile(file);
+    if (validationError) {
+      this.uploadError = validationError;
+      input.value = '';
+      return;
+    }
+
+    this.options[index].uploading = true;
+    this.uploadService.uploadImage(file).subscribe({
+      next: (response: { image_path: string }) => {
+        this.options[index].image_path = response.image_path;
+        this.options[index].uploading = false;
+        input.value = '';
+      },
+      error: (err: unknown) => {
+        console.error('Upload error:', err);
+        this.uploadError = 'Nie udało się wgrać obrazka.';
+        this.options[index].uploading = false;
+        input.value = '';
+      }
+    });
+  }
+
+  removeImage(index: number): void {
+    this.options[index].image_path = null;
+  }
+
   launch(): void {
-    const filled = this.options.map(o => o.trim()).filter(o => o.length > 0);
+    const filled = this.options
+      .filter(o => o.text.trim().length > 0)
+      .map(o => ({ text: o.text.trim(), image_path: o.image_path } as SessionOptionInput));
+
     if (!this.title.trim()) { this.error = 'Tytuł jest wymagany.'; return; }
     if (filled.length < 2) { this.error = 'Wymagane są co najmniej 2 opcje.'; return; }
     if (this.durationMinutes < 1 || this.durationMinutes > 60) {
@@ -89,7 +145,11 @@ export class SessionLauncherComponent implements OnInit {
       voting_mode: this.votingMode
     }).subscribe({
       next: (res: SessionCreateResponse) => this.router.navigate(['/session', res.token]),
-      error: () => { this.error = 'Nie udało się utworzyć sesji.'; this.launching = false; }
+      error: (err: unknown) => {
+        console.error('Launch error:', err);
+        this.error = 'Nie udało się utworzyć sesji.';
+        this.launching = false;
+      }
     });
   }
 }

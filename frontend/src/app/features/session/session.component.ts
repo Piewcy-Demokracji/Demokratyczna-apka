@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { SessionService, SessionStatusResponse } from '../../core/services/session.service';
+import { UploadService } from '../../core/services/upload.service';
 
 interface PollOption {
   id: number;
@@ -11,6 +12,7 @@ interface PollOption {
   userRating?: number;
   user_rating?: number;
   avg_rating?: number;
+  image_path?: string | null;
 }
 
 interface Poll {
@@ -49,7 +51,8 @@ export class SessionComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private authService: AuthService,
-    private sessionService: SessionService
+    private sessionService: SessionService,
+    private uploadService: UploadService,
   ) {}
 
   ngOnInit(): void {
@@ -77,11 +80,12 @@ export class SessionComponent implements OnInit, OnDestroy {
     }
   }
 
-  endSession(): void {
-    if (!this.sessionToken) {
-      return;
-    }
+  getImageUrl(path: string | null | undefined): string | null {
+    return this.uploadService.getImageUrl(path);
+  }
 
+  endSession(): void {
+    if (!this.sessionToken) { return; }
     this.sessionService.endSession(this.sessionToken).subscribe({
       next: () => this.redirectToHome(),
       error: () => this.redirectToHome()
@@ -126,9 +130,7 @@ export class SessionComponent implements OnInit, OnDestroy {
   }
 
   private checkSession(token: string): void {
-    if (!this.sessionToken || this.sessionEnded || this.isComplete) {
-      return;
-    }
+    if (!this.sessionToken || this.sessionEnded || this.isComplete) { return; }
 
     this.sessionService.getSession(token).subscribe({
       next: response => {
@@ -157,13 +159,8 @@ export class SessionComponent implements OnInit, OnDestroy {
 
   private handleSessionEnded(): void {
     this.sessionEnded = true;
-    if (this.pollInterval) {
-      clearInterval(this.pollInterval);
-    }
-    if (this.timerId) {
-      clearInterval(this.timerId);
-      this.timerId = null;
-    }
+    if (this.pollInterval) { clearInterval(this.pollInterval); }
+    if (this.timerId) { clearInterval(this.timerId); this.timerId = null; }
     setTimeout(() => this.router.navigate(['/']), 2000);
   }
 
@@ -172,15 +169,8 @@ export class SessionComponent implements OnInit, OnDestroy {
   }
 
   private resetSessionState(): void {
-    if (this.pollInterval) {
-      clearInterval(this.pollInterval);
-      this.pollInterval = null;
-    }
-    if (this.timerId) {
-      clearInterval(this.timerId);
-      this.timerId = null;
-    }
-
+    if (this.pollInterval) { clearInterval(this.pollInterval); this.pollInterval = null; }
+    if (this.timerId) { clearInterval(this.timerId); this.timerId = null; }
     this.sessionEnded = false;
     this.poll = null;
     this.timeLeft = 0;
@@ -194,11 +184,7 @@ export class SessionComponent implements OnInit, OnDestroy {
   }
 
   private updateTimeFromPoll(): void {
-    if (!this.poll || !this.poll.start_time) {
-      this.timeLeft = 0;
-      return;
-    }
-
+    if (!this.poll) { this.timeLeft = 0; return; }
     const now = Math.floor(Date.now() / 1000);
     const elapsed = now - this.poll.start_time;
     this.timeLeft = Math.max(this.poll.duration_seconds - elapsed, 0);
@@ -217,35 +203,24 @@ export class SessionComponent implements OnInit, OnDestroy {
 
     return options.map(option => ({
       ...option,
-      userRating: option.user_rating ?? option.userRating ?? existingRatings.get(option.id) ?? 0
+      userRating: option.user_rating ?? option.userRating ?? existingRatings.get(option.id) ?? 0,
+      image_path: option.image_path ?? null,
     }));
   }
 
   private startCountdown(): void {
-    if (this.timerId) {
-      clearInterval(this.timerId);
-    }
-
+    if (this.timerId) { clearInterval(this.timerId); }
     this.isComplete = false;
-
     this.timerId = setInterval(() => {
       this.updateTimeFromPoll();
-      if (this.timeLeft <= 0) {
-        this.finishPolling();
-      }
+      if (this.timeLeft <= 0) { this.finishPolling(); }
     }, 1000);
   }
 
   private finishPolling(): void {
     this.isComplete = true;
-    if (this.timerId) {
-      clearInterval(this.timerId);
-      this.timerId = null;
-    }
-
-    if (!this.poll) {
-      return;
-    }
+    if (this.timerId) { clearInterval(this.timerId); this.timerId = null; }
+    if (!this.poll) { return; }
 
     const totalVotes = this.isSingleChoiceMode()
       ? this.poll.options.reduce((sum, option) => sum + (option.rating_count || 0), 0)
@@ -258,10 +233,7 @@ export class SessionComponent implements OnInit, OnDestroy {
         const avg = this.isSingleChoiceMode()
           ? (totalVotes > 0 ? Math.round((ratingCount / totalVotes) * 100) : 0)
           : (ratingCount > 0 ? totalRating / ratingCount : 0);
-        return {
-          ...option,
-          avg_rating: avg,
-        } as PollOption & { avg_rating: number };
+        return { ...option, avg_rating: avg };
       })
       .sort((a, b) => ((b as any).avg_rating || 0) - ((a as any).avg_rating || 0));
   }
@@ -276,9 +248,7 @@ export class SessionComponent implements OnInit, OnDestroy {
 
   getSummaryPrimaryValue(option: PollOption): string {
     const score = option.avg_rating || 0;
-    return this.isSingleChoiceMode()
-      ? `${Math.round(score)}%`
-      : score.toFixed(1);
+    return this.isSingleChoiceMode() ? `${Math.round(score)}%` : score.toFixed(1);
   }
 
   formatTime(seconds: number): string {
@@ -288,26 +258,17 @@ export class SessionComponent implements OnInit, OnDestroy {
   }
 
   endPollEarly(): void {
-    if (!this.isHost || !this.sessionToken) {
-      return;
-    }
-
+    if (!this.isHost || !this.sessionToken) { return; }
     this.sessionService.endPollEarly(this.sessionToken).subscribe({
       next: response => {
         this.handleSessionResponse(response);
         if (response.poll) {
-          this.poll = {
-            ...response.poll,
-            options: this.mapPollOptions(response.poll.options)
-          };
+          this.poll = { ...response.poll, options: this.mapPollOptions(response.poll.options) };
         }
         this.updateTimeFromPoll();
         this.finishPolling();
       },
-      error: () => {
-        this.timeLeft = 0;
-        this.finishPolling();
-      }
+      error: () => { this.timeLeft = 0; this.finishPolling(); }
     });
   }
 
@@ -316,9 +277,7 @@ export class SessionComponent implements OnInit, OnDestroy {
   }
 
   rateOption(option: PollOption, star: number): void {
-    if (!this.poll || this.isComplete || !this.sessionToken) {
-      return;
-    }
+    if (!this.poll || this.isComplete || !this.sessionToken) { return; }
 
     if (this.isSingleChoiceMode()) {
       this.poll.options.forEach(candidate => {
@@ -329,43 +288,28 @@ export class SessionComponent implements OnInit, OnDestroy {
     }
 
     this.sessionService.vote(this.sessionToken, option.id, this.isSingleChoiceMode() ? 1 : star).subscribe({
-      next: () => {
-        this.checkSession(this.sessionToken!);
-      },
-      error: () => {
-        this.message = 'Failed to record vote. Please try again.';
-      }
+      next: () => { this.checkSession(this.sessionToken!); },
+      error: () => { this.message = 'Failed to record vote. Please try again.'; }
     });
   }
 
   getStarClass(option: PollOption, index: number): string {
-    if ((option.userRating ?? 0) >= index) {
-      return 'star active';
-    }
-    return 'star';
+    return (option.userRating ?? 0) >= index ? 'star active' : 'star';
   }
 
   solidifySummary(): void {
-    if (!this.poll) {
-      return;
-    }
-    this.finishPolling();
+    if (this.poll) { this.finishPolling(); }
   }
 
   downloadResults(): void {
-    if (!this.image_base64) {
-      return;
-    }
+    if (!this.image_base64) { return; }
     const pollTitle = this.poll?.title || 'results';
     const sanitizedTitle = pollTitle.replace(/[\/\\:*?"<>|]/g, '_');
-    const fileName = `${sanitizedTitle}.png`;
-
     const link = document.createElement('a');
     link.href = `data:image/png;base64,${this.image_base64}`;
-    link.download = fileName;
+    link.download = `${sanitizedTitle}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   }
 }
-
