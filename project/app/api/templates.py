@@ -5,14 +5,22 @@ from app.models.user import (
     Poll as PollModel, PollOption as PollOptionModel
 )
 from app.schemas.poll import (
-    TemplateResponse, TemplateCreate, AdminTemplateReviewResponse
+    TemplateResponse, TemplateCreate, AdminTemplateReviewResponse, TemplateOptionInput
 )
-from typing import List, Optional
+from typing import List, Optional, Union
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.deps import get_user
+from app.api.upload import validate_image_path
 
 router = APIRouter(prefix="/api/templates", tags=["templates"])
+
+
+def _normalize_option(raw: Union[TemplateOptionInput, str]) -> TemplateOptionInput:
+    if isinstance(raw, str):
+        return TemplateOptionInput(text=raw, image_path=None)
+    return raw
+
 
 def get_template(
         db: Session,
@@ -121,10 +129,14 @@ def create_template(
     db.add(template)
     db.commit()
     db.refresh(template)
-    for option_text in data.options:
+
+    for raw_option in data.options:
+        option = _normalize_option(raw_option)
+        validated_path = validate_image_path(option.image_path)
         db.add(PollTemplateOption(
             template_id=template.id,
-            text=option_text
+            text=option.text,
+            image_path=validated_path,
         ))
     db.commit()
 
@@ -153,23 +165,22 @@ def update_template(
 ):
     template = get_template(db, template_id)
     user = get_user(db, current_user)
-    
     if template.created_by != user.id and not user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator or an admin can update this template")
-    
-    # Update template
+
     template.title = data.title
     template.description = data.description
     template.can_be_public = data.can_be_public
-    
-    # Delete existing options
+
     db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).delete()
-    
-    # Add new options
-    for option_text in data.options:
+
+    for raw_option in data.options:
+        option = _normalize_option(raw_option)
+        validated_path = validate_image_path(option.image_path)
         db.add(PollTemplateOption(
             template_id=template.id,
-            text=option_text
+            text=option.text,
+            image_path=validated_path,
         ))
     
     db.commit()
@@ -283,7 +294,8 @@ def publish_template_from_admin_review(
     for option in options:
         db.add(PollTemplatePublishedOption(
             published_template_id=published.id,
-            text=option.text
+            text=option.text,
+            image_path=option.image_path,
         ))
 
     db.commit()
@@ -329,8 +341,7 @@ def publish_template(
     
     if not user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can publish templates")
-    
-    # Check if template is marked as can_be_public
+
     if not template.can_be_public:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This template is not marked as able to be published")
     
@@ -350,8 +361,7 @@ def publish_template(
     db.add(published)
     db.commit()
     db.refresh(published)
-    
-    # Copy options from original template
+
     options = db.query(PollTemplateOption).filter(
         PollTemplateOption.template_id == template.id
     ).all()
@@ -359,7 +369,8 @@ def publish_template(
     for option in options:
         db.add(PollTemplatePublishedOption(
             published_template_id=published.id,
-            text=option.text
+            text=option.text,
+            image_path=option.image_path,
         ))
     
     db.commit()

@@ -20,8 +20,10 @@ from app.schemas.user import (
     PollResponse,
     PollOptionResponse,
     SessionCreateRequest,
+    SessionOptionInput,
 )
-from typing import Optional
+from app.api.upload import validate_image_path, copy_image_for_session
+from typing import Optional, Union
 import random
 from datetime import datetime
 import string
@@ -33,6 +35,13 @@ import io
 import platform
 
 router = APIRouter(prefix="/api/session", tags=["session"])
+
+
+def _normalize_session_option(raw: Union[SessionOptionInput, str]) -> SessionOptionInput:
+    if isinstance(raw, str):
+        return SessionOptionInput(text=raw, image_path=None)
+    return raw
+
 
 def generate_image_with_poll_results(poll: PollResponse) -> str:
     """
@@ -215,6 +224,7 @@ def get_poll_response(db: Session, poll: PollModel, session_id: int, current_use
                 rating_count=rating_count,
                 total_rating=total_rating,
                 user_rating=user_votes.get(str(option.id), 0),
+                image_path=option.image_path,
             )
         )
 
@@ -321,15 +331,26 @@ def create_session(
     db.refresh(poll)
 
     if session_request.options:
-        for option_text in session_request.options:
-            db.add(PollOptionModel(poll_id=poll.id, text=option_text))
-    # Create poll options from template or use defaults
+        for raw_option in session_request.options:
+            option_input = _normalize_session_option(raw_option)
+            validated_path = validate_image_path(option_input.image_path)
+            copied_image = copy_image_for_session(validated_path)
+            db.add(PollOptionModel(
+                poll_id=poll.id,
+                text=option_input.text,
+                image_path=copied_image,
+            ))
     elif template:
         template_options = db.query(PollTemplateOption).filter(
             PollTemplateOption.template_id == template.id
         ).all()
         for template_option in template_options:
-            db.add(PollOptionModel(poll_id=poll.id, text=template_option.text))
+            copied_image = copy_image_for_session(template_option.image_path)
+            db.add(PollOptionModel(
+                poll_id=poll.id,
+                text=template_option.text,
+                image_path=copied_image,
+            ))
     db.commit()
 
     return SessionCreateResponse(token=session.token, code=session.code, host=session.host_username)

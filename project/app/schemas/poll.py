@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Union
 from datetime import datetime
 
 
@@ -52,9 +52,15 @@ class TemplateOptionCreate(TemplateOptionBase):
     pass
 
 
+class TemplateOptionInput(BaseModel):
+    text: str
+    image_path: Optional[str] = None
+
+
 class TemplateOptionResponse(BaseModel):
     id: int
     text: str
+    image_path: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -64,7 +70,8 @@ class TemplateCreate(BaseModel):
     title: str
     description: Optional[str] = None
     can_be_public: bool = False
-    options: List[str]
+    options: List[Union[TemplateOptionInput, str]]
+
 
 class TemplateResponse(BaseModel):
     id: int

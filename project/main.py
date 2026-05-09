@@ -1,12 +1,17 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.models.user import Base, User
 from app.core.database import engine, SessionLocal
 from app.core.security import get_password_hash
-from app.api import auth, polls, session as session_api, templates
+from app.api import auth, polls, session as session_api, templates, upload
 from app.models.user import Base, User, PollTemplate
 from sqlalchemy import inspect, text
 
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,7 +29,23 @@ def ensure_poll_voting_mode_column() -> None:
         connection.execute(text("ALTER TABLE polls ADD COLUMN voting_mode VARCHAR(20) NOT NULL DEFAULT 'stars'"))
 
 
+def ensure_image_path_columns() -> None:
+    inspector = inspect(engine)
+    table_names = set(inspector.get_table_names())
+    targets = ("poll_options", "poll_template_options", "poll_templates_publish_options")
+
+    for table in targets:
+        if table not in table_names:
+            continue
+        columns = {column["name"] for column in inspector.get_columns(table)}
+        if "image_path" in columns:
+            continue
+        with engine.begin() as connection:
+            connection.execute(text(f"ALTER TABLE {table} ADD COLUMN image_path VARCHAR NULL"))
+
+
 ensure_poll_voting_mode_column()
+ensure_image_path_columns()
 
 def create_default_admin_user() -> None:
     db = SessionLocal()
@@ -77,11 +98,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
 # Include routers
 app.include_router(auth.router)
 app.include_router(polls.router)
 app.include_router(session_api.router)
 app.include_router(templates.router)
+app.include_router(upload.router)
 
 
 @app.get("/")

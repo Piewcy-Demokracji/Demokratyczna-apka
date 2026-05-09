@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Union
 from datetime import datetime
 
 
@@ -41,6 +41,7 @@ class PollOptionResponse(BaseModel):
     rating_count: int
     total_rating: int
     user_rating: Optional[int] = 0
+    image_path: Optional[str] = None
 
 
 class PollResponse(BaseModel):
@@ -56,10 +57,15 @@ class SessionJoinRequest(BaseModel):
     code: str
 
 
+class SessionOptionInput(BaseModel):
+    text: str
+    image_path: Optional[str] = None
+
+
 class SessionCreateRequest(BaseModel):
     template_id: Optional[int] = None
     duration_seconds: int = 180
-    options: Optional[List[str]] = None
+    options: Optional[List[Union[SessionOptionInput, str]]] = None
     voting_mode: str = "stars"
 
 
