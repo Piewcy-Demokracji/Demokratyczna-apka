@@ -22,7 +22,7 @@ from app.schemas.user import (
     SessionCreateRequest,
     SessionOptionInput,
 )
-from app.api.upload import validate_image_path, copy_image_for_session, safe_delete_image
+from app.api.upload import validate_image_path, copy_image_for_session, claim_image_for_session, safe_delete_image
 from typing import Optional, Union
 import random
 from datetime import datetime
@@ -286,9 +286,11 @@ def create_session(
     current_user: str = Depends(get_current_user)
 ):
     """
-    Endpoint to create a new session. Per-option images coming from the template
-    or from the request payload are physically copied so the session owns its own
-    files and is decoupled from later edits to the source template.
+    Endpoint to create a new session. Per-option images are handled smartly:
+    - Paths already referenced by a template/published option are physically copied
+      so the session owns its own snapshot (isolation from later edits).
+    - Paths from fresh uploads (not referenced anywhere) are claimed directly to
+      avoid an unnecessary duplicate.
     """
     user = get_user_by_username(db, current_user)
 
@@ -327,11 +329,11 @@ def create_session(
         for raw_option in session_request.options:
             option_input = _normalize_session_option(raw_option)
             validated_path = validate_image_path(option_input.image_path)
-            copied_image = copy_image_for_session(validated_path)
+            stored_image = claim_image_for_session(db, validated_path)
             db.add(PollOptionModel(
                 poll_id=poll.id,
                 text=option_input.text,
-                image_path=copied_image,
+                image_path=stored_image,
             ))
     elif template:
         template_options = db.query(PollTemplateOption).filter(

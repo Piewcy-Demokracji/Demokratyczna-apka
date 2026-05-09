@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -19,7 +19,7 @@ interface OptionDraft {
   templateUrl: './create-option-set.component.html',
   styleUrl: './create-option-set.component.css'
 })
-export class CreateOptionSetComponent implements OnInit {
+export class CreateOptionSetComponent implements OnInit, OnDestroy {
   title = '';
   description = '';
   canBePublic = false;
@@ -30,6 +30,10 @@ export class CreateOptionSetComponent implements OnInit {
   editingId: number | null = null;
   isSavingCanBePublic = false;
   uploadError: string | null = null;
+
+  // Paths loaded from DB on edit; treated as durable and never auto-deleted on cancel
+  private originalPaths = new Set<string>();
+  private submitted = false;
 
   constructor(
     private templateService: TemplateService,
@@ -56,6 +60,17 @@ export class CreateOptionSetComponent implements OnInit {
     }
   }
 
+  ngOnDestroy(): void {
+    if (this.submitted) {
+      return;
+    }
+    this.options.forEach(opt => {
+      if (opt.image_path && !this.originalPaths.has(opt.image_path)) {
+        this.uploadService.deleteImage(opt.image_path).subscribe({ error: () => {} });
+      }
+    });
+  }
+
   loadTemplateForEditing(id: number): void {
     this.templateService.getTemplate(id).subscribe({
       next: (template: Template) => {
@@ -68,6 +83,12 @@ export class CreateOptionSetComponent implements OnInit {
               image_path: opt.image_path ?? null
             }))
           : [{ text: '', image_path: null }];
+
+        this.originalPaths = new Set(
+          template.options
+            .map(opt => opt.image_path)
+            .filter((p): p is string => !!p)
+        );
       },
       error: (error) => {
         console.error('Error loading template for editing:', error);
@@ -81,9 +102,14 @@ export class CreateOptionSetComponent implements OnInit {
   }
 
   removeOption(index: number): void {
-    if (this.options.length > 1) {
-      this.options.splice(index, 1);
+    if (this.options.length <= 1) {
+      return;
     }
+    const path = this.options[index].image_path;
+    if (path && !this.originalPaths.has(path)) {
+      this.uploadService.deleteImage(path).subscribe({ error: () => {} });
+    }
+    this.options.splice(index, 1);
   }
 
   getImageUrl(path: string | null): string | null {
@@ -121,6 +147,10 @@ export class CreateOptionSetComponent implements OnInit {
   }
 
   removeImage(index: number): void {
+    const path = this.options[index].image_path;
+    if (path && !this.originalPaths.has(path)) {
+      this.uploadService.deleteImage(path).subscribe({ error: () => {} });
+    }
     this.options[index].image_path = null;
   }
 
@@ -176,6 +206,7 @@ export class CreateOptionSetComponent implements OnInit {
 
     operation.subscribe({
       next: () => {
+        this.submitted = true;
         this.router.navigate(['/profile']);
       },
       error: (error) => {

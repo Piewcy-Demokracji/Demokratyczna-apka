@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TemplateService, Template } from '../../../core/services/template.service';
 import { SessionService, SessionCreateResponse, SessionOptionInput } from '../../../core/services/session.service';
@@ -15,7 +15,7 @@ interface OptionDraft {
   templateUrl: './session-launcher.component.html',
   styleUrls: ['./session-launcher.component.css']
 })
-export class SessionLauncherComponent implements OnInit {
+export class SessionLauncherComponent implements OnInit, OnDestroy {
   templateId!: number;
   title = '';
   options: OptionDraft[] = [];
@@ -26,17 +26,13 @@ export class SessionLauncherComponent implements OnInit {
   error = '';
   uploadError = '';
 
+  // Paths loaded from template on init; never auto-deleted (template still owns them)
+  private originalPaths = new Set<string>();
+  private launched = false;
+
   votingModeOptions = [
-    {
-      value: 'stars' as const,
-      label: 'Gwiazdki',
-      description: 'Każdą opcję oceniasz osobno w skali 1-5.'
-    },
-    {
-      value: 'single' as const,
-      label: 'Jedna opcja',
-      description: 'Wybierasz tylko jedną opcję.'
-    }
+    { value: 'stars' as const, label: 'Gwiazdki', description: 'Każdą opcję oceniasz osobno w skali 1-5.' },
+    { value: 'single' as const, label: 'Jedna opcja', description: 'Wybierasz tylko jedną opcję.' }
   ];
 
   presets = [
@@ -67,6 +63,11 @@ export class SessionLauncherComponent implements OnInit {
           text: o.text,
           image_path: o.image_path ?? null,
         }));
+        this.originalPaths = new Set(
+          t.options
+            .map(o => o.image_path)
+            .filter((p): p is string => !!p)
+        );
         this.loading = false;
       },
       error: () => {
@@ -76,14 +77,30 @@ export class SessionLauncherComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    if (this.launched) {
+      return;
+    }
+    this.options.forEach(opt => {
+      if (opt.image_path && !this.originalPaths.has(opt.image_path)) {
+        this.uploadService.deleteImage(opt.image_path).subscribe({ error: () => {} });
+      }
+    });
+  }
+
   addOption(): void {
     this.options.push({ text: '', image_path: null });
   }
 
   removeOption(index: number): void {
-    if (this.options.length > 2) {
-      this.options.splice(index, 1);
+    if (this.options.length <= 2) {
+      return;
     }
+    const path = this.options[index].image_path;
+    if (path && !this.originalPaths.has(path)) {
+      this.uploadService.deleteImage(path).subscribe({ error: () => {} });
+    }
+    this.options.splice(index, 1);
   }
 
   trackByIndex(i: number): number { return i; }
@@ -121,6 +138,10 @@ export class SessionLauncherComponent implements OnInit {
   }
 
   removeImage(index: number): void {
+    const path = this.options[index].image_path;
+    if (path && !this.originalPaths.has(path)) {
+      this.uploadService.deleteImage(path).subscribe({ error: () => {} });
+    }
     this.options[index].image_path = null;
   }
 
@@ -142,9 +163,12 @@ export class SessionLauncherComponent implements OnInit {
       template_id: this.templateId,
       duration_seconds: this.durationMinutes * 60,
       options: filled,
-      voting_mode: this.votingMode
+      voting_mode: this.votingMode,
     }).subscribe({
-      next: (res: SessionCreateResponse) => this.router.navigate(['/session', res.token]),
+      next: (res: SessionCreateResponse) => {
+        this.launched = true;
+        this.router.navigate(['/session', res.token]);
+      },
       error: (err: unknown) => {
         console.error('Launch error:', err);
         this.error = 'Nie udało się utworzyć sesji.';
