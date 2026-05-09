@@ -28,11 +28,6 @@
             class="option-card single-choice-card"
             [class.selected]="option.userRating === 1"
             (click)="rateOption(option, 1)">
-            <img
-              *ngIf="option.image_filename"
-              [src]="getOptionImageUrl(option.image_filename)"
-              alt="{{ option.name }}"
-              style="width:64px; height:64px; object-fit:cover; border-radius:8px; margin-right:12px;">
             <span class="single-choice-star" [class.active]="option.userRating === 1">&#9733;</span>
             <div class="option-copy">
               <div class="option-name">{{ option.name }}</div>
@@ -43,11 +38,6 @@
 
         <ng-template #starVoting>
           <div *ngFor="let option of poll.options" class="option-card">
-            <img
-              *ngIf="option.image_filename"
-              [src]="getOptionImageUrl(option.image_filename)"
-              alt="{{ option.name }}"
-              style="width:64px; height:64px; object-fit:cover; border-radius:8px; margin-bottom:8px;">
             <div class="option-name">{{ option.name }}</div>
             <div class="star-bar">
               <span
@@ -58,23 +48,17 @@
             </div>
           </div>
         </ng-template>
-
       </div>
 
       <div *ngIf="isComplete && poll" class="summary-section">
         <h2>Summary</h2>
         <div *ngFor="let option of summaryOptions" class="summary-card">
-          <img
-            *ngIf="option.image_filename"
-            [src]="getOptionImageUrl(option.image_filename)"
-            alt="{{ option.name }}"
-            style="width:48px; height:48px; object-fit:cover; border-radius:6px; margin-bottom:6px;">
           <h3>{{ option.name }}</h3>
           <p>{{ getSummaryPrimaryLabel() }}: {{ getSummaryPrimaryValue(option) }}</p>
           <p>Votes: {{ option.rating_count }}</p>
         </div>
       </div>
-
+      
       <button class="btn btn-primary" (click)="downloadResults()" [disabled]="!image_base64">Download results</button>
       <button class="btn btn-primary" (click)="goHome()">Back to home</button>
     </div>

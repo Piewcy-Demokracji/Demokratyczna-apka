@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.models.user import Base, User
 from app.core.database import engine, SessionLocal
 from app.core.security import get_password_hash
-from app.api import auth, polls, session as session_api, templates, upload
+from app.api import auth, polls, session as session_api, templates
 from app.models.user import Base, User, PollTemplate
 from sqlalchemy import inspect, text
 
@@ -82,7 +82,6 @@ app.include_router(auth.router)
 app.include_router(polls.router)
 app.include_router(session_api.router)
 app.include_router(templates.router)
-app.include_router(upload.router)
 
 
 @app.get("/")

@@ -11,7 +11,6 @@ interface PollOption {
   userRating?: number;
   user_rating?: number;
   avg_rating?: number;
-  image_filename?: string | null;
 }
 
 interface Poll {
@@ -367,10 +366,6 @@ export class SessionComponent implements OnInit, OnDestroy {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  }
-
-  getOptionImageUrl(filename: string | null | undefined): string | null {
-    return filename ? `http://localhost:8000/api/upload/${filename}` : null;
   }
 }
 

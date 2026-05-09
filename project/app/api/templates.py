@@ -11,7 +11,6 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.deps import get_user
-import os
 
 router = APIRouter(prefix="/api/templates", tags=["templates"])
 
@@ -162,14 +161,7 @@ def update_template(
     template.title = data.title
     template.description = data.description
     template.can_be_public = data.can_be_public
-
-    old_options = db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).all()
-    for option in old_options:
-        if option.image_filename:
-            file_path = os.path.join("uploads", option.image_filename)
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-
+    
     # Delete existing options
     db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).delete()
     
@@ -217,13 +209,6 @@ def delete_template(
 
     if template.created_by != user.id and not user.is_admin:
         raise  HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the creator or an admin can delete this template")
-
-    options = db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).all()
-    for option in options:
-        if option.image_filename:
-            file_path = os.path.join("uploads", option.image_filename)
-            if os.path.isfile(file_path):
-                os.remove(file_path)
 
     db.query(PollTemplateOption).filter(PollTemplateOption.template_id == template.id).delete()
     db.delete(template)
@@ -380,32 +365,3 @@ def publish_template(
     db.commit()
     
     return {"id": published.id, "message": "Template published successfully"}
-
-
-@router.patch("/{template_id:int}/options/{option_id:int}/image")
-def set_option_image(
-        template_id: int,
-        option_id: int,
-        filename: str,
-        db: Session = Depends(get_db),
-        current_user: str = Depends(get_current_user)
-    ):
-    template = get_template(db, template_id)
-    user = get_user(db, current_user)
-
-    if template.created_by != user.id and not user.is_admin:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    option = db.query(PollTemplateOption).filter(
-        PollTemplateOption.id == option_id,
-        PollTemplateOption.template_id == template_id
-    ).first()
-
-    if not option:
-        raise HTTPException(status_code=404, detail="Option not found")
-
-    option.image_filename = filename
-    db.commit()
-    db.refresh(option)
-
-    return {"option_id": option.id, "image_filename": option.image_filename}

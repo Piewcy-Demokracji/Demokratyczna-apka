@@ -35,42 +35,20 @@
     <div class="form-group">
       <label>Options</label>
       <div class="options-list">
-        <div *ngFor="let option of options; let i = index; trackBy: trackByIndex" class="option-item">
-          <div class="option-row">
-            <input
-              type="text"
-              [(ngModel)]="options[i].text"
-              [name]="'option-' + i"
-              class="form-control option-input"
-              placeholder="Enter option text">
-            <button
-              type="button"
-              class="btn btn-danger btn-sm remove-option"
-              (click)="removeOption(i)"
-              [disabled]="options.length <= 1">
-              ×
-            </button>
-          </div>
-
-          <div class="option-image-row">
-            <label class="btn btn-secondary btn-sm">
-              {{ options[i].uploading ? 'Uploading...' : (options[i].image_filename ? 'Change image' : 'Add image') }}
-              <input
-                type="file"
-                accept="image/*"
-                style="display:none"
-                (change)="onFileSelected($event, i)"
-                [disabled]="options[i].uploading">
-            </label>
-            <span *ngIf="options[i].uploadError" style="color:red; font-size:0.85em; margin-left:8px">
-              {{ options[i].uploadError }}
-            </span>
-            <img
-              *ngIf="options[i].image_filename"
-              [src]="getImageUrl(options[i].image_filename)"
-              alt="Option image"
-              style="height:48px; width:48px; object-fit:cover; border-radius:6px; margin-left:8px;">
-          </div>
+        <div *ngFor="let option of optionSet.options; let i = index; trackBy: trackByIndex" class="option-item">
+          <input
+            type="text"
+            [(ngModel)]="optionSet.options[i]"
+            [name]="'option-' + i"
+            class="form-control option-input"
+            placeholder="Enter option text">
+          <button
+            type="button"
+            class="btn btn-danger btn-sm remove-option"
+            (click)="removeOption(i)"
+            [disabled]="optionSet.options.length <= 1">
+            ×
+          </button>
         </div>
       </div>
       <button type="button" class="btn btn-secondary btn-sm" (click)="addOption()">
@@ -93,7 +71,7 @@
       <button
         type="submit"
         class="btn btn-primary"
-        [disabled]="!optionSetForm.form.valid || options.length === 0 || isLoading">
+        [disabled]="!optionSetForm.form.valid || optionSet.options.length === 0 || isLoading">
         {{ isLoading ? 'Saving...' : (isEditing ? 'Update Option Set' : 'Create Option Set') }}
       </button>
       <button type="button" class="btn btn-secondary" (click)="goBack()">Cancel</button>

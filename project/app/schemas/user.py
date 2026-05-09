@@ -41,7 +41,6 @@ class PollOptionResponse(BaseModel):
     rating_count: int
     total_rating: int
     user_rating: Optional[int] = 0
-    image_filename: Optional[str] = None
 
 
 class PollResponse(BaseModel):
@@ -57,16 +56,10 @@ class SessionJoinRequest(BaseModel):
     code: str
 
 
-class OptionWithImage(BaseModel):
-    text: str
-    image_filename: Optional[str] = None
-
-
 class SessionCreateRequest(BaseModel):
     template_id: Optional[int] = None
     duration_seconds: int = 180
     options: Optional[List[str]] = None
-    options_with_images: Optional[List[OptionWithImage]] = None
     voting_mode: str = "stars"
 
 

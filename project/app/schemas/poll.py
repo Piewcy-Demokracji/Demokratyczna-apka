@@ -55,7 +55,6 @@ class TemplateOptionCreate(TemplateOptionBase):
 class TemplateOptionResponse(BaseModel):
     id: int
     text: str
-    image_filename: Optional[str] = None
 
     class Config:
         from_attributes = True

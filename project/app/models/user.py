@@ -39,7 +39,6 @@ class PollOption(Base):
     poll_id = Column(Integer)
     text = Column(String)
     votes_count = Column(Integer, default=0)
-    image_filename = Column(String, nullable=True)
 
 
 class Vote(Base):
@@ -113,7 +112,6 @@ class PollTemplateOption(Base):
     id = Column(Integer, primary_key=True, index=False)
     template_id = Column(Integer, ForeignKey("poll_templates.id"))
     text = Column(String)
-    image_filename = Column(String, nullable=True)
 
 
 class PollTemplatePublishedOption(Base):
