@@ -1,33 +1,33 @@
 .review-page {
-  min-height: calc(100vh - 80px);
-  padding: 2rem;
-  background: #f8fafc;
+  min-height: calc(100vh - 88px);
+  padding: 2rem 1rem 3rem;
 }
 
 .review-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
   margin-bottom: 1.5rem;
 }
 
 .review-card,
 .state-box {
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 4px);
   padding: 1.5rem;
 }
 
 .review-card h3 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
-  color: #1f2d3d;
+  margin: 0 0 0.6rem;
+  color: var(--text);
 }
 
 .author {
-  color: #566573;
-  margin-top: 0;
+  color: var(--text-muted);
+  margin: 0;
 }
 
 .options-section {
@@ -36,6 +36,7 @@
 
 .options-section h4 {
   margin: 0 0 0.75rem;
+  color: var(--text);
 }
 
 .options-section ul {
@@ -44,25 +45,29 @@
 }
 
 .options-section li {
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.4rem;
+  color: var(--text-muted);
 }
 
 .actions {
   margin-top: 1.5rem;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 
 .btn {
   border: none;
-  border-radius: 8px;
-  padding: 0.75rem 1.1rem;
+  border-radius: var(--radius);
+  padding: 0.85rem 1.2rem;
   color: #ffffff;
   cursor: pointer;
+  font-size: 0.95rem;
 }
 
 .btn-secondary {
-  background: #7f8c8d;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
 }
 
 .btn-success {
@@ -70,5 +75,5 @@
 }
 
 .btn-danger {
-  background: #c0392b;
+  background: var(--danger);
 }

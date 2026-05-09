@@ -1,1 +1,20 @@
-<router-outlet></router-outlet>
+<div class="app-shell">
+  <header class="app-nav">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <span>{{ appTitle }}</span>
+      </div>
+      <nav class="nav-links">
+        <a routerLink="/">Home</a>
+        <a routerLink="/profile">Profile</a>
+        <a routerLink="/login">Login</a>
+        <a routerLink="/register">Register</a>
+        <a *ngIf="showAdminLink" routerLink="/admin/option-sets">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

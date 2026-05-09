@@ -1,1 +1,7 @@
-/* Global styles */
+.app-shell {
+  min-height: 100vh;
+}
+
+.main-content {
+  min-height: calc(100vh - 88px);
+}

@@ -1,11 +1,12 @@
 .admin-page {
-  min-height: calc(100vh - 80px);
-  padding: 2rem;
-  background: #f5f7fa;
+  min-height: calc(100vh - 88px);
+  padding: 2rem 1rem 3rem;
 }
 
 .admin-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
@@ -13,29 +14,30 @@
 
 .admin-header h2 {
   margin: 0;
-  color: #1f2d3d;
-}
-
-.state-box,
-.template-card {
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
-  padding: 1.25rem;
-  margin-bottom: 1rem;
+  color: var(--text);
 }
 
 .section-wrap {
   margin-bottom: 2rem;
 }
 
+.state-box,
+.template-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 4px);
+  padding: 1.35rem;
+  margin-bottom: 1rem;
+}
+
 .section-title {
   margin: 0 0 0.75rem;
-  color: #1f2d3d;
+  color: var(--text);
 }
 
 .template-card {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
@@ -43,48 +45,47 @@
 
 .template-content h3 {
   margin: 0 0 0.35rem;
-  color: #243447;
+  color: var(--text);
 }
 
-.template-content p {
-  margin: 0 0 0.5rem;
-  color: #5b6770;
-}
-
+.template-content p,
 .template-content small {
-  color: #6c7a89;
+  margin: 0;
+  color: var(--text-muted);
 }
 
 .template-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 
 .btn {
   border: none;
-  border-radius: 8px;
-  padding: 0.75rem 1.1rem;
-  color: #ffffff;
+  border-radius: var(--radius);
+  padding: 0.85rem 1.2rem;
+  color: white;
   cursor: pointer;
   font-size: 0.95rem;
 }
 
 .btn-primary {
-  background: #2980b9;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
 }
 
 .btn-secondary {
-  background: #7f8c8d;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
 }
 
 .btn-danger {
-  background: #c0392b;
+  background: var(--danger);
 }
 
 @media (max-width: 768px) {
   .template-card {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
   }
 
   .template-actions {

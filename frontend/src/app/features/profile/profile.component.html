@@ -10,7 +10,6 @@
   <div class="option-sets">
     <div class="profile-actions">
       <button *ngIf="isAdmin" class="btn btn-admin" (click)="goToAdminReview()">Admin Review</button>
-      <button class="btn btn-secondary" (click)="goHome()">Home</button>
     </div>
     <h3>Your option sets</h3>
     <div *ngIf="optionSets.length === 0" class="no-option-sets">
@@ -24,7 +23,7 @@
       </div>
       <div class="option-set-actions">
         <button class="btn btn-secondary" (click)="editSet(set)">Edit</button>
-        <a [routerLink]="['/session/launch', set.id]" class="btn btn-primary">Użyj</a>
+        <a [routerLink]="['/session/launch', set.id]" class="btn btn-primary">Launch</a>
         <button class="btn btn-danger" (click)="deleteSet(set)">Delete</button>
       </div>
     </div>
