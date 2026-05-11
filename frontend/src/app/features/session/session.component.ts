@@ -118,7 +118,7 @@ export class SessionComponent implements OnInit, OnDestroy {
             options: this.mapPollOptions(response.poll.options)
           };
           this.updateTimeFromPoll();
-          if (this.timeLeft <= 0) {
+          if (this.timeLeft <= 0 || this.sessionEnded) {
             this.finishPolling();
           } else {
             this.startCountdown();
@@ -141,7 +141,7 @@ export class SessionComponent implements OnInit, OnDestroy {
             options: this.mapPollOptions(response.poll.options)
           };
           this.updateTimeFromPoll();
-          if (this.timeLeft <= 0 && !this.isComplete) {
+          if ((this.timeLeft <= 0 || this.sessionEnded) && !this.isComplete) {
             this.finishPolling();
           }
         }
@@ -154,6 +154,7 @@ export class SessionComponent implements OnInit, OnDestroy {
     this.sessionPassword = response.code ?? null;
     this.status = response.status;
     this.isHost = response.status === 'Host';
+    this.sessionEnded = (response.session_status ?? 'ACTIVE') !== 'ACTIVE';
     this.image_base64 = response.image_base64 ?? null;
   }
 

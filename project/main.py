@@ -2,11 +2,10 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.models.user import Base, User
+from app.models.user import Base, User, PollTemplate
 from app.core.database import engine, SessionLocal
 from app.core.security import get_password_hash
 from app.api import auth, polls, session as session_api, templates, upload
-from app.models.user import Base, User, PollTemplate
 from sqlalchemy import inspect, text
 
 
@@ -44,8 +43,41 @@ def ensure_image_path_columns() -> None:
             connection.execute(text(f"ALTER TABLE {table} ADD COLUMN image_path VARCHAR NULL"))
 
 
+def ensure_unified_session_columns() -> None:
+    inspector = inspect(engine)
+    if "sessions" not in inspector.get_table_names():
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("sessions")}
+    alter_statements = []
+
+    if "session_data" not in columns:
+        alter_statements.append("ALTER TABLE sessions ADD COLUMN session_data JSONB NOT NULL DEFAULT '{}'::jsonb")
+    if "responses_data" not in columns:
+        alter_statements.append("ALTER TABLE sessions ADD COLUMN responses_data JSONB NOT NULL DEFAULT '{}'::jsonb")
+    if "status" not in columns:
+        alter_statements.append("ALTER TABLE sessions ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'")
+    if "version" not in columns:
+        alter_statements.append("ALTER TABLE sessions ADD COLUMN version INTEGER NOT NULL DEFAULT 1")
+    if "updated_at" not in columns:
+        alter_statements.append("ALTER TABLE sessions ADD COLUMN updated_at TIMESTAMP NULL")
+    if "ended_at" not in columns:
+        alter_statements.append("ALTER TABLE sessions ADD COLUMN ended_at TIMESTAMP NULL")
+    if "deleted_at" not in columns:
+        alter_statements.append("ALTER TABLE sessions ADD COLUMN deleted_at TIMESTAMP NULL")
+
+    with engine.begin() as connection:
+        for statement in alter_statements:
+            connection.execute(text(statement))
+
+        connection.execute(text("UPDATE sessions SET updated_at = COALESCE(updated_at, created_at, NOW())"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS idx_sessions_created_at ON sessions(created_at)"))
+
+
 ensure_poll_voting_mode_column()
 ensure_image_path_columns()
+ensure_unified_session_columns()
 
 def create_default_admin_user() -> None:
     db = SessionLocal()

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, UniqueConstraint, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
@@ -61,7 +61,14 @@ class Session(Base):
     token = Column(String, unique=True, index=True)
     code = Column(String(6), unique=True, index=True)
     host_username = Column(String, index=True)
+    session_data = Column(JSON, nullable=False, default=dict)
+    responses_data = Column(JSON, nullable=False, default=dict)
+    status = Column(String(20), default="ACTIVE", index=True)
+    version = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    ended_at = Column(DateTime, nullable=True)
+    deleted_at = Column(DateTime, nullable=True)
 
 
 class SessionParticipant(Base):

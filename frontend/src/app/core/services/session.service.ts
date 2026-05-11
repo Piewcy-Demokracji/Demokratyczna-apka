@@ -42,6 +42,7 @@ export interface SessionStatusResponse {
   token: string;
   host: string;
   status: 'Host' | 'Participant';
+  session_status?: 'ACTIVE' | 'ENDED' | 'DELETED';
   poll?: Poll;
   code?: string;
   image_base64?: string | null;

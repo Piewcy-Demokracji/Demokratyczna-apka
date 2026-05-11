@@ -79,6 +79,7 @@ class SessionStatusResponse(BaseModel):
     token: str
     host: str
     status: str
+    session_status: str = "ACTIVE"
     poll: Optional[PollResponse] = None
     code: Optional[str] = None
     image_base64: Optional[str] = None

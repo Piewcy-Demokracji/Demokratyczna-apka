@@ -5,11 +5,6 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import (
     Session as SessionModel,
-    SessionParticipant,
-    SessionUserVotes,
-    Poll as PollModel,
-    PollOption as PollOptionModel,
-    Vote as VoteModel,
     User,
     PollTemplate,
     PollTemplateOption,
@@ -24,11 +19,11 @@ from app.schemas.user import (
 )
 from app.api.upload import validate_image_path, copy_image_for_session, claim_image_for_session, safe_delete_image
 from typing import Optional, Union
+import copy
 import random
 from datetime import datetime
 import string
 import uuid
-import json
 from PIL import Image, ImageDraw, ImageFont
 import base64
 import io
@@ -41,6 +36,57 @@ def _normalize_session_option(raw: Union[SessionOptionInput, str]) -> SessionOpt
     if isinstance(raw, str):
         return SessionOptionInput(text=raw, image_path=None)
     return raw
+
+
+def _now_ts() -> int:
+    return int(datetime.utcnow().timestamp())
+
+
+def _empty_dict(value):
+    return value if isinstance(value, dict) else {}
+
+
+def _session_poll(session_row: SessionModel):
+    return _empty_dict(_empty_dict(session_row.session_data).get("poll"))
+
+
+def _session_options(session_row: SessionModel):
+    options = _session_poll(session_row).get("options", [])
+    return options if isinstance(options, list) else []
+
+
+def _responses_users(session_row: SessionModel):
+    responses = copy.deepcopy(_empty_dict(session_row.responses_data))
+    users = responses.get("users", {})
+    if not isinstance(users, dict):
+        users = {}
+        responses["users"] = users
+    session_row.responses_data = responses
+    return users
+
+
+def _responses_aggregates(session_row: SessionModel):
+    responses = copy.deepcopy(_empty_dict(session_row.responses_data))
+    aggregates = responses.get("aggregates", {})
+    if not isinstance(aggregates, dict):
+        aggregates = {}
+        responses["aggregates"] = aggregates
+    session_row.responses_data = responses
+    return aggregates
+
+
+def _get_session_user_entry(users: dict, user: User) -> dict:
+    entry = users.get(str(user.id))
+    if isinstance(entry, dict):
+        return entry
+
+    legacy_entry = users.get(user.username)
+    if isinstance(legacy_entry, dict):
+        users[str(user.id)] = legacy_entry
+        users.pop(user.username, None)
+        return legacy_entry
+
+    return {}
 
 
 def generate_image_with_poll_results(poll: PollResponse) -> str:
@@ -104,7 +150,7 @@ def generate_image_with_poll_results(poll: PollResponse) -> str:
     img_str = base64.b64encode(buf.getvalue()).decode('utf-8')
 
     return img_str 
-
+    
 def generate_session_code(db: Session) -> str:
     """
     Generates a unique 6-character session code consisting of uppercase letters and digits.
@@ -113,7 +159,6 @@ def generate_session_code(db: Session) -> str:
 
     return: A unique session code.
     """
-def generate_session_code(db: Session) -> str:
     allowed = string.ascii_uppercase + string.digits
     for _ in range(20):
         code = ''.join(random.choice(allowed) for _ in range(6))
@@ -154,7 +199,12 @@ def get_session_by_token(db: Session, token: str):
 
     return: The session object if found, otherwise None.
     """
-    return db.query(SessionModel).filter(SessionModel.token == token).first()
+    return (
+        db.query(SessionModel)
+        .filter(SessionModel.token == token)
+        .filter(SessionModel.status != "DELETED")
+        .first()
+    )
 
 
 def get_session_by_code(db: Session, code: str):
@@ -166,102 +216,74 @@ def get_session_by_code(db: Session, code: str):
 
     return: The session object if found, otherwise None.
     """
-    return db.query(SessionModel).filter(SessionModel.code == code).first()
-
-
-def get_participant(db: Session, session_id: int, username: str):
-    """
-    Fetches a session participant from the database based on the session ID and username.
-
-    param db: Database session for querying.
-    param session_id: The ID of the session.
-    param username: The username of the participant.
-
-    return: The session participant object if found, otherwise None.
-    """
     return (
-        db.query(SessionParticipant)
-        .filter(SessionParticipant.session_id == session_id)
-        .filter(SessionParticipant.username == username)
+        db.query(SessionModel)
+        .filter(SessionModel.code == code)
+        .filter(SessionModel.status != "DELETED")
         .first()
     )
 
 
-def get_poll_response(db: Session, poll: PollModel, session_id: int, current_user_id: Optional[int] = None) -> PollResponse:
-    """
-    Get poll with aggregated vote counts from database.
+def _is_poll_expired(poll_data: PollResponse) -> bool:
+    elapsed = _now_ts() - poll_data.start_time
+    return elapsed >= poll_data.duration_seconds
 
-    param db: Database session for querying.
-    param poll: The poll for which to fetch the results.
-    param session_id: The ID of the session to which the poll belongs.
-    param current_user_id: The ID of the current user (optional, used to include user's own vote in the response).
 
-    return: A PollResponse object containing the poll details and aggregated vote counts.
-    """
-    options = []
-    poll_options = db.query(PollOptionModel).filter(PollOptionModel.poll_id == poll.id).all()
+def _mark_session_ended_if_expired(session_row: SessionModel) -> None:
+    if session_row.status != "ACTIVE":
+        return
+
+    poll = _session_poll(session_row)
+    start_time = int(poll.get("start_time", _now_ts()))
+    duration_seconds = int(poll.get("duration_seconds", 0))
+    if _now_ts() - start_time < duration_seconds:
+        return
+
+    session_row.status = "ENDED"
+    session_row.ended_at = datetime.utcnow()
+    session_row.updated_at = datetime.utcnow()
+    session_row.version = (session_row.version or 1) + 1
+
+
+def _poll_response_from_session(session_row: SessionModel, current_user_id: Optional[int]) -> Optional[PollResponse]:
+    poll = _session_poll(session_row)
+    options_data = _session_options(session_row)
+    if not poll:
+        return None
+
+    users = _responses_users(session_row)
+    aggregates = _responses_aggregates(session_row)
 
     user_votes = {}
     if current_user_id is not None:
-        saved_votes = db.query(SessionUserVotes).filter(
-            SessionUserVotes.session_id == session_id,
-            SessionUserVotes.user_id == current_user_id,
-        ).first()
-        if saved_votes and saved_votes.votes_json:
-            try:
-                user_votes = json.loads(saved_votes.votes_json)
-            except json.JSONDecodeError:
-                user_votes = {}
+        user_entry = users.get(str(current_user_id), {})
+        if isinstance(user_entry, dict):
+            user_votes = user_entry.get("votes", {}) if isinstance(user_entry.get("votes", {}), dict) else {}
 
-    for option in poll_options:
-        votes = db.query(VoteModel).filter(VoteModel.option_id == option.id).all()
-        rating_count = len(votes)
-        total_rating = sum(v.rating for v in votes) if votes else 0
-
+    options = []
+    for idx, option in enumerate(options_data, start=1):
+        option_id = int(option.get("id", idx))
+        option_key = str(option.get("option_key", option_id))
+        aggregate = aggregates.get(option_key, {}) if isinstance(aggregates.get(option_key, {}), dict) else {}
         options.append(
             PollOptionResponse(
-                id=option.id,
-                name=option.text,
-                rating_count=rating_count,
-                total_rating=total_rating,
-                user_rating=user_votes.get(str(option.id), 0),
-                image_path=option.image_path,
+                id=option_id,
+                name=str(option.get("text", "")),
+                rating_count=int(aggregate.get("rating_count", 0)),
+                total_rating=int(aggregate.get("total_rating", 0)),
+                user_rating=int(user_votes.get(option_key, 0)),
+                image_path=option.get("image_path"),
             )
         )
 
     return PollResponse(
-        id=poll.id,
-        title=poll.title,
-        duration_seconds=poll.duration_seconds,
-        start_time=poll.start_time,
-        voting_mode=getattr(poll, "voting_mode", "stars"),
+        id=session_row.id,
+        title=str(poll.get("title", "")),
+        duration_seconds=int(poll.get("duration_seconds", 0)),
+        start_time=int(poll.get("start_time", _now_ts())),
+        voting_mode=str(poll.get("voting_mode", "stars")),
         options=options,
     )
-
-
-def get_poll_by_session(db: Session, session_id: int):
-    """
-    Fetches the poll associated with a given session ID.
-
-    param db: Database session for querying.
-    param session_id: The ID of the session for which to fetch the poll.
-
-    return: The poll object if found, otherwise None.
-    """
-    return db.query(PollModel).filter(PollModel.session_id == session_id).first()
-
-
-def is_poll_expired(poll: PollModel) -> bool:
-    """
-    Checks if the poll has expired based on its start time and duration.
-    
-    param poll: The poll to ckeck for expiration.
-    
-    return: True if the poll has expired, otherwise False.
-    """
-    now = int(datetime.utcnow().timestamp())
-    elapsed = now - poll.start_time
-    return elapsed >= poll.duration_seconds
 
 
 def get_user_by_username(db: Session, username: str) -> User:
@@ -296,12 +318,7 @@ def create_session(
 
     code = generate_session_code(db)
     token = generate_session_token(db)
-    session = SessionModel(code=code, token=token, host_username=current_user)
-    db.add(session)
-    db.commit()
-    db.refresh(session)
-
-    now = int(datetime.utcnow().timestamp())
+    now = _now_ts()
 
     template = None
     if session_request.template_id:
@@ -312,41 +329,81 @@ def create_session(
     poll_title = template.title if template else "Best coffee shop nearby"
     poll_description = template.description if template else "Rate coffee places from 0-5"
     
-    poll = PollModel(
-        title=poll_title,
-        description=poll_description,
-        creator_id=user.id,
-        session_id=session.id,
-        duration_seconds=session_request.duration_seconds,
-        voting_mode=session_request.voting_mode if session_request.voting_mode in {"stars", "single"} else "stars",
-        start_time=now,
-    )
-    db.add(poll)
-    db.commit()
-    db.refresh(poll)
+    options_payload = []
 
     if session_request.options:
-        for raw_option in session_request.options:
+        for idx, raw_option in enumerate(session_request.options, start=1):
             option_input = _normalize_session_option(raw_option)
             validated_path = validate_image_path(option_input.image_path)
             stored_image = claim_image_for_session(db, validated_path)
-            db.add(PollOptionModel(
-                poll_id=poll.id,
-                text=option_input.text,
-                image_path=stored_image,
-            ))
+            options_payload.append({
+                "id": idx,
+                "option_key": str(idx),
+                "text": option_input.text,
+                "image_path": stored_image,
+                "created_from": "custom",
+            })
     elif template:
         template_options = db.query(PollTemplateOption).filter(
             PollTemplateOption.template_id == template.id
         ).all()
-        for template_option in template_options:
+        for idx, template_option in enumerate(template_options, start=1):
             copied_image = copy_image_for_session(template_option.image_path)
-            db.add(PollOptionModel(
-                poll_id=poll.id,
-                text=template_option.text,
-                image_path=copied_image,
-            ))
+            options_payload.append({
+                "id": idx,
+                "option_key": str(idx),
+                "text": template_option.text,
+                "image_path": copied_image,
+                "created_from": "template",
+            })
+
+    responses_users = {
+        str(user.id): {
+            "username": user.username,
+            "joined_at": now,
+            "left_at": None,
+            "active": True,
+            "votes": {},
+            "updated_at": now,
+        }
+    }
+    responses_aggregates = {
+        str(option["option_key"]): {"rating_count": 0, "total_rating": 0}
+        for option in options_payload
+    }
+
+    session = SessionModel(
+        code=code,
+        token=token,
+        host_username=current_user,
+        status="ACTIVE",
+        version=1,
+        session_data={
+            "schema_version": 1,
+            "host": {
+                "host_user_id": user.id,
+                "host_username": current_user,
+            },
+            "poll": {
+                "title": poll_title,
+                "description": poll_description,
+                "template_id": session_request.template_id,
+                "duration_seconds": session_request.duration_seconds,
+                "start_time": now,
+                "voting_mode": session_request.voting_mode if session_request.voting_mode in {"stars", "single"} else "stars",
+                "options": options_payload,
+            },
+        },
+        responses_data={
+            "users": responses_users,
+            "aggregates": responses_aggregates,
+        },
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    db.add(session)
     db.commit()
+    db.refresh(session)
 
     return SessionCreateResponse(token=session.token, code=session.code, host=session.host_username)
 
@@ -367,28 +424,48 @@ def join_session(
     return: A SessionStatusResponse object containing the session token, host username, status (Host/Participant), and poll details if available.
     """
     code = session_join.code.strip().upper()
-    session = get_session_by_code(db, code)
-    if not session:
+    session_row = get_session_by_code(db, code)
+    if not session_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    if session_row.status != "ACTIVE":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Session is not active")
 
-    if session.host_username != current_user:
-        participant = get_participant(db, session.id, current_user)
-        if not participant:
-            participant = SessionParticipant(session_id=session.id, username=current_user)
-            db.add(participant)
-            db.commit()
-        status_value = "Participant"
-    else:
-        status_value = "Host"
-
-    poll = get_poll_by_session(db, session.id)
     user = get_user_by_username(db, current_user)
-    poll_data = get_poll_response(db, poll, session.id, user.id) if poll else None
+    users = _responses_users(session_row)
+    now = _now_ts()
+    user_key = str(user.id)
+    
+    is_host = session_row.host_username == current_user
+
+    existing = _get_session_user_entry(users, user)
+    users[user_key] = {
+        "username": user.username,
+        "joined_at": existing.get("joined_at", now),
+        "left_at": None,
+        "active": True,
+        "votes": existing.get("votes", {}) if isinstance(existing.get("votes", {}), dict) else {},
+        "updated_at": now,
+    }
+    responses = copy.deepcopy(_empty_dict(session_row.responses_data))
+    responses["users"] = users
+    session_row.responses_data = responses
+    session_row.updated_at = datetime.utcnow()
+    session_row.version = (session_row.version or 1) + 1
+    db.commit()
+
+    _mark_session_ended_if_expired(session_row)
+    if session_row.status != "ACTIVE":
+        db.commit()
+    db.refresh(session_row)
+    
+    status_value = "Host" if is_host else "Participant"
+    poll_data = _poll_response_from_session(session_row, user.id)
 
     return SessionStatusResponse(
-        token=session.token,
-        host=session.host_username,
+        token=session_row.token,
+        host=session_row.host_username,
         status=status_value,
+        session_status=session_row.status,
         poll=poll_data,
     )
 
@@ -404,29 +481,34 @@ def get_session(token: str, db: Session = Depends(get_db), current_user: str = D
 
     return: A SessionStatusResponse object containing the session token, host username, status (Host/Participant), and poll details and image with results if available.
     """
-    session = get_session_by_token(db, token)
-    if not session:
+    session_row = get_session_by_token(db, token)
+    if not session_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
-    if session.host_username != current_user:
-        participant = get_participant(db, session.id, current_user)
-        if not participant:
+    user = get_user_by_username(db, current_user)
+
+    if session_row.host_username != current_user:
+        users = _responses_users(session_row)
+        user_entry = _get_session_user_entry(users, user)
+        if not user_entry or not user_entry.get("active", False):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not part of this session")
         status_value = "Participant"
     else:
         status_value = "Host"
 
-    # Get the actual poll for this session
-    poll = get_poll_by_session(db, session.id)
-    user = get_user_by_username(db, current_user)
-    poll_data = get_poll_response(db, poll, session.id, user.id) if poll else None
-    img_str = generate_image_with_poll_results(poll_data) if is_poll_expired(poll) else None
+    _mark_session_ended_if_expired(session_row)
+    db.commit()
+    db.refresh(session_row)
+
+    poll_data = _poll_response_from_session(session_row, user.id)
+    img_str = generate_image_with_poll_results(poll_data) if poll_data and _is_poll_expired(poll_data) else None
 
     return SessionStatusResponse(
-        token=session.token,
-        code=session.code,
-        host=session.host_username,
+        token=session_row.token,
+        code=session_row.code,
+        host=session_row.host_username,
         status=status_value,
+        session_status=session_row.status,
         poll=poll_data,
         image_base64=img_str,     
     )
@@ -456,105 +538,112 @@ def vote_on_option(token: str, vote: VoteRequest, db: Session = Depends(get_db),
 
     return: A dictionary containing a success message if the vote was recorded successfully, otherwise raises an HTTPException with an appropriate error message and status code.
     """
-    session = get_session_by_token(db, token)
-    if not session:
+    session_row = (
+        db.query(SessionModel)
+        .filter(SessionModel.token == token)
+        .filter(SessionModel.status != "DELETED")
+        .with_for_update()
+        .first()
+    )
+    if not session_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
-    # Check if user is part of this session
-    is_host = session.host_username == current_user
-    if not is_host:
-        participant = get_participant(db, session.id, current_user)
-        if not participant:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not part of this session")
+    user = get_user_by_username(db, current_user)
 
-    # Get poll and option
-    poll = get_poll_by_session(db, session.id)
-    if not poll:
+    users = _responses_users(session_row)
+    user_key = str(user.id)
+    user_entry = _get_session_user_entry(users, user)
+
+    if not user_entry or not user_entry.get("active", False):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not part of this session")
+
+    poll_data = _poll_response_from_session(session_row, user.id)
+    if not poll_data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Poll not found")
 
-    if is_poll_expired(poll):
+    _mark_session_ended_if_expired(session_row)
+    if session_row.status == "ENDED" or _is_poll_expired(poll_data):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Voting has ended")
 
-    option = db.query(PollOptionModel).filter(
-        PollOptionModel.id == vote.option_id,
-        PollOptionModel.poll_id == poll.id
-    ).first()
-    if not option:
+    options = _session_options(session_row)
+    selected_option = None
+    selected_key = None
+    for option in options:
+        option_id = int(option.get("id", 0))
+        if option_id == vote.option_id:
+            selected_option = option
+            selected_key = str(option.get("option_key", option_id))
+            break
+    if not selected_option or not selected_key:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Option not found")
 
-    # Validate rating
     if vote.rating < 0 or vote.rating > 5:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Rating must be between 0 and 5")
 
-    is_single_choice = getattr(poll, "voting_mode", "stars") == "single"
+    is_single_choice = poll_data.voting_mode == "single"
     if is_single_choice and vote.rating != 1:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Single-choice polls accept only one selected option")
 
-    # Get user
-    user = get_user_by_username(db, current_user)
+    votes = user_entry.get("votes", {}) if isinstance(user_entry.get("votes", {}), dict) else {}
+    aggregates = _responses_aggregates(session_row)
 
-    existing_votes = db.query(VoteModel).filter(
-        VoteModel.poll_id == poll.id,
-        VoteModel.user_id == user.id,
-    ).all()
-
-    if is_single_choice:
-        for existing_vote in existing_votes:
-            if existing_vote.option_id != vote.option_id:
-                db.delete(existing_vote)
-
-        existing_vote = next((existing for existing in existing_votes if existing.option_id == vote.option_id), None)
-        if existing_vote:
-            existing_vote.rating = 1
-            existing_vote.updated_at = datetime.utcnow()
-        else:
-            new_vote = VoteModel(
-                poll_id=poll.id,
-                option_id=vote.option_id,
-                user_id=user.id,
-                rating=1,
-            )
-            db.add(new_vote)
-    else:
-        # Check if user already voted on this option
-        existing_vote = next((existing for existing in existing_votes if existing.option_id == vote.option_id), None)
-
-        if existing_vote:
-            # Update existing vote
-            existing_vote.rating = vote.rating
-            existing_vote.updated_at = datetime.utcnow()
-        else:
-            # Create new vote
-            new_vote = VoteModel(
-                poll_id=poll.id,
-                option_id=vote.option_id,
-                user_id=user.id,
-                rating=vote.rating
-            )
-            db.add(new_vote)
-
-    # Persist user's votes for this session to support reconnect/device switch.
-    user_votes_row = db.query(SessionUserVotes).filter(
-        SessionUserVotes.session_id == session.id,
-        SessionUserVotes.user_id == user.id,
-    ).first()
-    if not user_votes_row:
-        user_votes_row = SessionUserVotes(session_id=session.id, user_id=user.id, votes_json="{}")
-        db.add(user_votes_row)
-
-    votes_dict = {}
-    if user_votes_row.votes_json:
-        try:
-            votes_dict = json.loads(user_votes_row.votes_json)
-        except json.JSONDecodeError:
-            votes_dict = {}
+    def ensure_aggregate(option_key: str):
+        item = aggregates.get(option_key)
+        if not isinstance(item, dict):
+            item = {"rating_count": 0, "total_rating": 0}
+            aggregates[option_key] = item
+        item["rating_count"] = int(item.get("rating_count", 0))
+        item["total_rating"] = int(item.get("total_rating", 0))
+        return item
 
     if is_single_choice:
-        votes_dict = {str(vote.option_id): 1}
+        previous_votes = {k: int(v) for k, v in votes.items()}
+        for key, previous_value in previous_votes.items():
+            if key == selected_key:
+                continue
+            agg = ensure_aggregate(key)
+            agg["rating_count"] = max(0, agg["rating_count"] - 1)
+            agg["total_rating"] = max(0, agg["total_rating"] - previous_value)
+
+        selected_agg = ensure_aggregate(selected_key)
+        if selected_key not in votes:
+            selected_agg["rating_count"] += 1
+            selected_agg["total_rating"] += 1
+
+        votes = {selected_key: 1}
     else:
-        votes_dict[str(vote.option_id)] = vote.rating
-    user_votes_row.votes_json = json.dumps(votes_dict)
-    user_votes_row.updated_at = datetime.utcnow()
+        previous = int(votes.get(selected_key, 0))
+        current = int(vote.rating)
+        agg = ensure_aggregate(selected_key)
+
+        if previous == 0 and current > 0:
+            agg["rating_count"] += 1
+            agg["total_rating"] += current
+            votes[selected_key] = current
+        elif previous > 0 and current == 0:
+            agg["rating_count"] = max(0, agg["rating_count"] - 1)
+            agg["total_rating"] = max(0, agg["total_rating"] - previous)
+            votes.pop(selected_key, None)
+        elif previous > 0 and current > 0:
+            agg["total_rating"] += current - previous
+            votes[selected_key] = current
+        else:
+            votes.pop(selected_key, None)
+
+    now = _now_ts()
+    user_entry["votes"] = votes
+    user_entry["active"] = True
+    user_entry["left_at"] = None
+    user_entry["updated_at"] = now
+    users[user_key] = user_entry
+
+    responses = copy.deepcopy(_empty_dict(session_row.responses_data))
+    responses["users"] = users
+    responses["aggregates"] = aggregates
+    session_row.responses_data = responses
+
+    session_row.version = (session_row.version or 1) + 1
+    session_row.updated_at = datetime.utcnow()
 
     db.commit()
     return {"detail": "Vote recorded successfully"}
@@ -575,34 +664,50 @@ def end_poll_early(
     
     return: A SessionStatusResponse object containing the session token, host username, status (Host), poll details and image with final results.
     """
-    session = get_session_by_token(db, token)
-    if not session:
+    session_row = (
+        db.query(SessionModel)
+        .filter(SessionModel.token == token)
+        .filter(SessionModel.status != "DELETED")
+        .with_for_update()
+        .first()
+    )
+    if not session_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
-    if session.host_username != current_user:
+    if session_row.host_username != current_user:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the session host can end polling early")
 
-    poll = get_poll_by_session(db, session.id)
-    if not poll:
+    poll_data = _poll_response_from_session(session_row, None)
+    if not poll_data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Poll not found")
 
-    if not is_poll_expired(poll):
-        now = int(datetime.utcnow().timestamp())
-        elapsed = max(now - poll.start_time, 0)
-        poll.duration_seconds = elapsed
-        poll.updated_at = datetime.utcnow()
-        db.commit()
-        db.refresh(poll)
+    poll = _session_poll(session_row)
+    now = _now_ts()
+    elapsed = max(now - int(poll.get("start_time", now)), 0)
+    poll["duration_seconds"] = elapsed
+
+    session_data = copy.deepcopy(_empty_dict(session_row.session_data))
+    session_data["poll"] = poll
+    session_row.session_data = session_data
+
+    session_row.status = "ENDED"
+    session_row.ended_at = datetime.utcnow()
+    session_row.updated_at = datetime.utcnow()
+    session_row.version = (session_row.version or 1) + 1
+
+    db.commit()
+    db.refresh(session_row)
 
     user = get_user_by_username(db, current_user)
-    poll_data = get_poll_response(db, poll, session.id, user.id)
-    img_str = generate_image_with_poll_results(poll_data) if is_poll_expired(poll) else None
+    poll_data = _poll_response_from_session(session_row, user.id)
+    img_str = generate_image_with_poll_results(poll_data) if poll_data and _is_poll_expired(poll_data) else None
 
     return SessionStatusResponse(
-        token=session.token,
-        code=session.code,
-        host=session.host_username,
+        token=session_row.token,
+        code=session_row.code,
+        host=session_row.host_username,
         status="Host",
+        session_status=session_row.status,
         poll=poll_data,
         image_base64=img_str,
     )
@@ -619,18 +724,37 @@ def leave_session(token: str, db: Session = Depends(get_db), current_user: str =
 
     return: No content if the participant succesfully leaves the session, otehrwise raises an HTTPException with an appropriate error message and status code.
     """
-    session = get_session_by_token(db, token)
-    if not session:
+    session_row = (
+        db.query(SessionModel)
+        .filter(SessionModel.token == token)
+        .filter(SessionModel.status != "DELETED")
+        .with_for_update()
+        .first()
+    )
+    if not session_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
-    if session.host_username == current_user:
+    if session_row.host_username == current_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Host cannot leave session; use end session instead")
 
-    participant = get_participant(db, session.id, current_user)
-    if not participant:
+    user = get_user_by_username(db, current_user)
+    users = _responses_users(session_row)
+    user_key = str(user.id)
+    user_entry = _get_session_user_entry(users, user)
+    if not user_entry or not user_entry.get("active", False):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not part of this session")
 
-    db.delete(participant)
+    user_entry["active"] = False
+    user_entry["left_at"] = _now_ts()
+    user_entry["updated_at"] = _now_ts()
+    users[user_key] = user_entry
+
+    responses = copy.deepcopy(_empty_dict(session_row.responses_data))
+    responses["users"] = users
+    session_row.responses_data = responses
+    session_row.updated_at = datetime.utcnow()
+    session_row.version = (session_row.version or 1) + 1
+
     db.commit()
 
 
@@ -645,27 +769,31 @@ def delete_session(token: str, db: Session = Depends(get_db), current_user: str 
 
     return: No content if the session was deleted successfully, otherwise raises an HTTPException with an appropriate error message and status code.
     """
-    session = get_session_by_token(db, token)
-    if not session:
+    session_row = (
+        db.query(SessionModel)
+        .filter(SessionModel.token == token)
+        .filter(SessionModel.status != "DELETED")
+        .with_for_update()
+        .first()
+    )
+    if not session_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
-    if session.host_username != current_user:
+    if session_row.host_username != current_user:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the session host can end this session")
 
-    poll = get_poll_by_session(db, session.id)
-    if poll:
-        # Collect image paths before deletion
-        poll_options = db.query(PollOptionModel).filter(PollOptionModel.poll_id == poll.id).all()
-        option_image_paths = [opt.image_path for opt in poll_options if opt.image_path]
+    option_image_paths = [
+        option.get("image_path")
+        for option in _session_options(session_row)
+        if option.get("image_path")
+    ]
+    for path in option_image_paths:
+        safe_delete_image(path)
 
-        db.query(VoteModel).filter(VoteModel.poll_id == poll.id).delete()
-        db.query(PollOptionModel).filter(PollOptionModel.poll_id == poll.id).delete()
-        db.delete(poll)
+    session_row.status = "DELETED"
+    session_row.deleted_at = datetime.utcnow()
+    session_row.ended_at = session_row.ended_at or datetime.utcnow()
+    session_row.updated_at = datetime.utcnow()
+    session_row.version = (session_row.version or 1) + 1
 
-        for path in option_image_paths:
-            safe_delete_image(path)
-
-    db.query(SessionUserVotes).filter(SessionUserVotes.session_id == session.id).delete()
-    db.query(SessionParticipant).filter(SessionParticipant.session_id == session.id).delete()
-    db.delete(session)
     db.commit()
