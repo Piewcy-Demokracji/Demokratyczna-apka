@@ -33,6 +33,7 @@ from PIL import Image, ImageDraw, ImageFont
 import base64
 import io
 import platform
+import os
 
 router = APIRouter(prefix="/api/session", tags=["session"])
 
@@ -63,37 +64,48 @@ def generate_image_with_poll_results(poll: PollResponse) -> str:
     
     image_width = max_name_length * 40 + 50
     image_height = 400 #Add adjustable height once options with images are implemented
-    background_color = (134,0,21)
-    font_color = (34,177,76)
+    background_color = (255,255,255)
+    font_color = (0,0,0)
 
     results_img = Image.new("RGB", (image_width,image_height), color=background_color)
     d = ImageDraw.Draw(results_img)
     font_size = 20
     
+    linux_font_paths = [
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf'
+    ]
+    font = None
     if platform.system() == 'Windows':
         try:
             font = ImageFont.truetype('C:\\Windows\\Fonts\\arial.ttf', font_size)
         except OSError:
             font = ImageFont.load_default()
     else:
-        try:
-            font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', font_size)
-        except OSError:
-            font = ImageFont.load_default()
+        for path in linux_font_paths:
+            if os.path.exists(path):
+                try:
+                    font = ImageFont.truetype(path, font_size)
+                    break
+                except OSError:
+                    continue
+    if font is None:
+        font = ImageFont.load_default(size=font_size)
     
     row_modifier = 1
     column = 0 
 
     for i in range(0, min(10, len(options_scored))):
         option, final_score = options_scored[i]
+        
         x = 100 + max_name_length * 20 * column
         y = 30 + 50 * row_modifier
+
         d.text(( x , y ),
             f"{i+1}. {option.name}: {final_score:.2f}",
                 fill=font_color,
-                font=font, 
-                stroke_width=1, 
-                stroke_fill=font_color)
+                font=font)
         row_modifier += 1
         if i % 5 == 4:
             column += 1
@@ -102,8 +114,10 @@ def generate_image_with_poll_results(poll: PollResponse) -> str:
     buf = io.BytesIO()
     results_img.save(buf, format='PNG')
     img_str = base64.b64encode(buf.getvalue()).decode('utf-8')
+    results_img.show()
+    results_img.close()
 
-    return img_str 
+    return img_str
 
 def generate_session_code(db: Session) -> str:
     """
