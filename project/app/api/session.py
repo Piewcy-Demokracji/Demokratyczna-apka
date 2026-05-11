@@ -515,7 +515,7 @@ def get_session(token: str, db: Session = Depends(get_db), current_user: str = D
     db.refresh(session_row)
 
     poll_data = _poll_response_from_session(session_row, user.id)
-    img_str = generate_image_with_poll_results(poll_data) if poll_data and _is_poll_expired(poll_data) else None
+    img_str = generate_image_with_poll_results(poll_data) if poll_data and (session_row.status == "ENDED" or _is_poll_expired(poll_data)) else None
 
     return SessionStatusResponse(
         token=session_row.token,
