@@ -8,6 +8,10 @@ from app.core.security import get_password_hash
 from app.api import auth, polls, session as session_api, templates, upload
 from sqlalchemy import inspect, text
 
+_ALLOWED_DDL_TABLES: frozenset = frozenset(
+    {"poll_options", "poll_template_options", "poll_templates_publish_options"}
+)
+
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -36,11 +40,13 @@ def ensure_image_path_columns() -> None:
     for table in targets:
         if table not in table_names:
             continue
+        if table not in _ALLOWED_DDL_TABLES:
+            raise ValueError(f"DDL migration attempted on unknown table: {table!r}")
         columns = {column["name"] for column in inspector.get_columns(table)}
         if "image_path" in columns:
             continue
         with engine.begin() as connection:
-            connection.execute(text(f"ALTER TABLE {table} ADD COLUMN image_path VARCHAR NULL"))
+            connection.execute(text(f'ALTER TABLE "{table}" ADD COLUMN image_path VARCHAR NULL'))
 
 
 def ensure_unified_session_columns() -> None:

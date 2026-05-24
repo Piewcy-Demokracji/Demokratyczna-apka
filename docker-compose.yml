@@ -41,6 +41,9 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=postgresql://user:password@db:5432/demokratyczna
+      # ZMIEŃ na losowy klucz przed deploymentem produkcyjnym!
+      # Możesz wygenerować: python -c "import secrets; print(secrets.token_hex(32))"
+      - SECRET_KEY=e04546c956d9096df05ed9626460d0f9e101a78f8c84818b2e8188afd951abb6
     command: uvicorn main:app --host 0.0.0.0 --reload
     networks:
       - voting_app_network
