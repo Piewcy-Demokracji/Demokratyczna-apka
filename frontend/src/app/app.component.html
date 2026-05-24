@@ -6,10 +6,13 @@
       </div>
       <nav class="nav-links">
         <a routerLink="/">Home</a>
-        <a routerLink="/profile">Profile</a>
-        <a routerLink="/login">Login</a>
-        <a routerLink="/register">Register</a>
+        <a *ngIf="isLoggedIn" routerLink="/profile">Profile</a>
         <a *ngIf="showAdminLink" routerLink="/admin/option-sets">Admin</a>
+        <ng-container *ngIf="!isLoggedIn">
+          <a routerLink="/login">Login</a>
+          <a routerLink="/register">Register</a>
+        </ng-container>
+        <a *ngIf="isLoggedIn" (click)="logout()" style="cursor:pointer">Logout</a>
       </nav>
     </div>
   </header>

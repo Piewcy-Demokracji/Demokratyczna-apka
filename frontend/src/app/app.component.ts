@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { AuthService } from './core/services/auth.service';
 
 @Component({
@@ -11,7 +12,7 @@ export class AppComponent implements OnInit {
   isLoggedIn = false;
   isAdmin = false;
 
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService, private router: Router) {}
 
   ngOnInit(): void {
     this.isLoggedIn = this.authService.isLoggedIn();
@@ -38,5 +39,10 @@ export class AppComponent implements OnInit {
 
   get showAdminLink(): boolean {
     return this.isLoggedIn && this.isAdmin;
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/login']);
   }
 }
