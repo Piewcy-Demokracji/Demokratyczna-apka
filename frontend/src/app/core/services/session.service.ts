@@ -52,7 +52,7 @@ export interface SessionStatusResponse {
   providedIn: 'root'
 })
 export class SessionService {
-  private apiUrl = 'http://localhost:8000/api/session';
+  private apiUrl = 'https://demokratyczny-backend.azurewebsites.net/api/session';
 
   constructor(private http: HttpClient) {}
 

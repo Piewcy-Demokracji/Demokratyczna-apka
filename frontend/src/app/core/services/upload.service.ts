@@ -10,8 +10,8 @@ export interface UploadImageResponse {
   providedIn: 'root'
 })
 export class UploadService {
-  private apiUrl = 'http://localhost:8000/api/upload';
-  private baseUrl = 'http://localhost:8000';
+  private apiUrl = 'https://demokratyczny-backend.azurewebsites.net/api/upload';
+  private baseUrl = 'https://demokratyczny-backend.azurewebsites.net';
 
   readonly maxFileSizeBytes = 5 * 1024 * 1024;
   readonly acceptedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];

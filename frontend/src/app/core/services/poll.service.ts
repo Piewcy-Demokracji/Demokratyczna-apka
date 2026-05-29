@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class PollService {
-  private apiUrl = 'http://localhost:8000/api/polls';
+  private apiUrl = 'https://demokratyczny-backend.azurewebsites.net/api/polls';
 
   constructor(private http: HttpClient) {}
 

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
@@ -28,7 +28,7 @@ interface MeResponse {
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:8000/api/auth';
+  private apiUrl = 'https://demokratyczny-backend.azurewebsites.net/api/auth';
   private currentUserSubject = new BehaviorSubject<string | null>(this.getStoredUsername());
   public currentUser$ = this.currentUserSubject.asObservable();
 
@@ -43,10 +43,11 @@ export class AuthService {
   }
 
   login(username: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, {
-      username,
-      password
-    }).pipe(
+    const body = { username, password };
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+
+  
+    return this.http.post<AuthResponse>('https://demokratyczny-backend.azurewebsites.net/api/auth/login', body, { headers }).pipe(
       tap(response => {
         localStorage.setItem('token', response.access_token);
         localStorage.setItem('username', username);

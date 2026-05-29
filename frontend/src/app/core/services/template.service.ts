@@ -35,7 +35,7 @@ export interface CreateTemplateRequest {
   providedIn: 'root'
 })
 export class TemplateService {
-  private apiUrl = 'http://localhost:8000/api/templates';
+  private apiUrl = 'https://demokratyczny-backend.azurewebsites.net/api/templates';
 
   constructor(private http: HttpClient) {}
 

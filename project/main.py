@@ -125,12 +125,13 @@ app = FastAPI(
     title="Voting App API",
     description="A voting application API",
     version="1.0.0",
+    redirect_slashes=False,
 )
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200", "http://localhost:3000"],
+    allow_origins=["http://localhost:4200", "http://localhost:3000","https://demokratycznyfrontend.z49.web.core.windows.net"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
