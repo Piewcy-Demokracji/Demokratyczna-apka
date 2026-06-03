@@ -125,7 +125,6 @@ app = FastAPI(
     title="Voting App API",
     description="A voting application API",
     version="1.0.0",
-    redirect_slashes=False,
 )
 
 # Add CORS middleware
