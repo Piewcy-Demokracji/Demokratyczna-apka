@@ -18,10 +18,12 @@ interface OptionSet {
 })
 export class ProfileComponent implements OnInit {
   username = 'PlaceholderUser';
-  profilePic = 'https://via.placeholder.com/100';
   isAdmin = false;
-
   optionSets: OptionSet[] = [];
+
+  get usernameInitial(): string {
+    return this.username ? this.username.charAt(0).toUpperCase() : '?';
+  }
 
   constructor(
     private authService: AuthService,

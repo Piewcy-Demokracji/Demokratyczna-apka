@@ -12,13 +12,20 @@
   margin-bottom: 1rem;
 }
 
-.profile-pic {
-  width: 110px;
-  height: 110px;
+.profile-avatar {
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #051022;
+  font-size: 1.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 22px rgba(94, 168, 255, 0.4);
+  letter-spacing: -0.02em;
 }
 
 .profile-header h2,
