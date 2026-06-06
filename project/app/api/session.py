@@ -100,9 +100,14 @@ def generate_image_with_poll_results(poll: PollResponse) -> str:
     """
     options_scored = []
     max_name_length = 0
+    is_single_choice = poll.voting_mode == "single"
+    total_votes = sum(int(option.rating_count) for option in poll.options) if is_single_choice else 0
 
     for option in poll.options:
-        final_score = (option.total_rating / option.rating_count) if (option.rating_count > 0) else 0
+        if is_single_choice:
+            final_score = round((option.rating_count / total_votes) * 100) if total_votes > 0 else 0
+        else:
+            final_score = (option.total_rating / option.rating_count) if (option.rating_count > 0) else 0
         options_scored.append((option, final_score))
         max_name_length = max(max_name_length, len(option.name))
 
@@ -148,8 +153,9 @@ def generate_image_with_poll_results(poll: PollResponse) -> str:
         x = 100 + max_name_length * 20 * column
         y = 30 + 50 * row_modifier
 
+        display_score = f"{final_score:.0f}% " if is_single_choice else f"{final_score:.2f} "
         d.text(( x , y ),
-            f"{i+1}. {option.name}: {final_score:.2f}",
+            f"{i+1}. {option.name}: {display_score}",
                 fill=font_color,
                 font=font)
         row_modifier += 1
