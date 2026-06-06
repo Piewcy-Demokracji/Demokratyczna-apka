@@ -16,6 +16,7 @@ interface OptionSet {
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css']
 })
+/** Component for the home page showing public option sets, session join features, and quick navigation. */
 export class HomeComponent implements OnInit {
   isLoggedIn = false;
   isAdmin = false;

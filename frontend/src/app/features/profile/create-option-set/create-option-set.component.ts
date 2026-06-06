@@ -19,6 +19,7 @@ interface OptionDraft {
   templateUrl: './create-option-set.component.html',
   styleUrl: './create-option-set.component.css'
 })
+/** Component used for creating or editing an option set, including image uploads and public visibility toggles. */
 export class CreateOptionSetComponent implements OnInit, OnDestroy {
   title = '';
   description = '';

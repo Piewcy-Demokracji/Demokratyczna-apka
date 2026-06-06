@@ -11,6 +11,7 @@ import { AdminOptionSetsComponent } from './features/admin/admin-option-sets/adm
 import { AdminOptionSetReviewComponent } from './features/admin/admin-option-set-review/admin-option-set-review.component';
 import { SessionLauncherComponent } from './features/session/session-launcher/session-launcher.component';
 
+/** Application route definitions for the frontend. */
 const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'login', component: LoginComponent },

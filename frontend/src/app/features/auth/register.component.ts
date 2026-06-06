@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.css']
 })
+/** Component for user registration with validation and redirect after successful signup. */
 export class RegisterComponent {
   username = '';
   email = '';

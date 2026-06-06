@@ -6,6 +6,7 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class PollService {
+  /** Service for querying poll data and submitting poll votes. */
   private apiUrl = 'https://demokratyczny-backend.azurewebsites.net/api/polls';
 
   constructor(private http: HttpClient) {}

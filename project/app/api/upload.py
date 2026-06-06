@@ -1,3 +1,4 @@
+"""Image upload endpoint and helper functions for validating, copying, and deleting uploaded images."""
 import io
 import os
 import shutil
@@ -27,7 +28,13 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 def _normalize_uploads_path(image_path: str) -> str:
-    """Normalize and validate that the path is inside UPLOAD_DIR (no traversal)."""
+    """
+    Normalize and validate that the path is inside UPLOAD_DIR (no traversal).
+
+    param image_path: The raw image path provided by the client.
+
+    return: A normalized uploads-relative image path.
+    """
     normalized = image_path.replace("\\", "/").strip()
     if ".." in normalized.split("/") or normalized.startswith("/"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid image path")
@@ -40,7 +47,13 @@ def _normalize_uploads_path(image_path: str) -> str:
 
 
 def validate_image_path(image_path: Optional[str]) -> Optional[str]:
-    """Validate a client-supplied image path. Returns None for empty input."""
+    """
+    Validate a client-supplied image path. Returns None for empty input.
+
+    param image_path: The optional image path supplied by the client.
+
+    return: The normalized valid image path or None if input is empty.
+    """
     if not image_path:
         return None
     normalized = _normalize_uploads_path(image_path)
@@ -50,7 +63,14 @@ def validate_image_path(image_path: Optional[str]) -> Optional[str]:
 
 
 def is_image_path_referenced(db: Session, image_path: Optional[str]) -> bool:
-    """Check whether any DB row points to the given image path."""
+    """
+    Check whether any DB row points to the given image path.
+
+    param db: Database session used to search for references.
+    param image_path: The optional image path to validate.
+
+    return: True if the image path is referenced by any record, otherwise False.
+    """
     if not image_path:
         return False
     if db.query(PollTemplateOption).filter(PollTemplateOption.image_path == image_path).first():
@@ -63,7 +83,13 @@ def is_image_path_referenced(db: Session, image_path: Optional[str]) -> bool:
 
 
 def copy_image_for_session(source_path: Optional[str]) -> Optional[str]:
-    """Always create a physical copy of the file. Used when source is guaranteed referenced."""
+    """
+    Always create a physical copy of the file. Used when source is guaranteed referenced.
+
+    param source_path: The existing image path to copy.
+
+    return: The new copied image path, or None if no source path was provided.
+    """
     if not source_path:
         return None
     if not os.path.isfile(source_path):
@@ -81,6 +107,11 @@ def claim_image_for_session(db: Session, source_path: Optional[str]) -> Optional
     - If the path is referenced by any existing record, copy it (snapshot isolation).
     - If it's a fresh upload (not referenced anywhere), take ownership directly,
       avoiding a redundant duplicate.
+
+    param db: Database session used to inspect references.
+    param source_path: The optional source image path to claim or copy.
+
+    return: The image path that should be stored for the session, or None if no source path was provided.
     """
     if not source_path:
         return None
@@ -92,7 +123,13 @@ def claim_image_for_session(db: Session, source_path: Optional[str]) -> Optional
 
 
 def safe_delete_image(image_path: Optional[str]) -> None:
-    """Delete an image file from disk if it exists. Silent no-op otherwise."""
+    """
+    Delete an image file from disk if it exists. Silent no-op otherwise.
+
+    param image_path: The optional path of the image to delete.
+
+    return: None.
+    """
     if not image_path:
         return
     try:
@@ -103,6 +140,13 @@ def safe_delete_image(image_path: Optional[str]) -> None:
 
 
 def _validate_and_open(content: bytes) -> Image.Image:
+    """
+    Validate uploaded image bytes and return an opened PIL image instance.
+
+    param content: Raw file bytes from the uploaded image.
+
+    return: A validated PIL Image instance.
+    """
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -132,7 +176,10 @@ async def upload_image(
     Upload an image (JPEG/PNG/GIF/WEBP/BMP) to be referenced as image_path
     in template options or session option overrides.
 
-    Returns: {"image_path": "uploads/<uuid>.png"}
+    param file: The uploaded image file.
+    param current_user: The authenticated username performing the upload.
+
+    return: A JSON object containing the stored image path.
     """
     content = await file.read()
     img = _validate_and_open(content)
@@ -157,6 +204,12 @@ def delete_image(
     Delete an unreferenced image file from disk. If the path is referenced by any
     template/published/poll option, the call is a silent no-op so we never break
     a live record. Path traversal is blocked.
+
+    param path: The image path query parameter to delete.
+    param db: Database session used to verify references.
+    param current_user: The authenticated username performing the delete.
+
+    return: No content if the deletion is allowed.
     """
     normalized = _normalize_uploads_path(path)
     if is_image_path_referenced(db, normalized):

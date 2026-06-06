@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
+/** Component that handles user login form submission and error display. */
 export class LoginComponent {
   username = '';
   password = '';

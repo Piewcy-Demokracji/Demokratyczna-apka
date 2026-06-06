@@ -1,9 +1,11 @@
+"""Pydantic schema definitions for user objects, authentication, and session responses."""
 from pydantic import BaseModel
 from typing import Optional, List, Union
 from datetime import datetime
 
 
 class UserBase(BaseModel):
+    """Basic user data structure shared by multiple API payloads."""
     username: str
     email: str
 

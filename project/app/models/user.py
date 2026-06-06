@@ -6,6 +6,7 @@ Base = declarative_base()
 
 
 class User(Base):
+    """Represents an authenticated user account in the application."""
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -18,6 +19,7 @@ class User(Base):
 
 
 class Poll(Base):
+    """Data model for a stored poll attached to a session or template."""
     __tablename__ = "polls"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -33,6 +35,7 @@ class Poll(Base):
 
 
 class PollOption(Base):
+    """Data model for an option within a poll, optionally linking to an uploaded image."""
     __tablename__ = "poll_options"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -43,6 +46,7 @@ class PollOption(Base):
 
 
 class Vote(Base):
+    """Record of a user's vote on a poll option."""
     __tablename__ = "votes"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -55,6 +59,7 @@ class Vote(Base):
 
 
 class Session(Base):
+    """Represents a live or completed voting session, including poll payload and response aggregates."""
     __tablename__ = "sessions"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -72,6 +77,7 @@ class Session(Base):
 
 
 class SessionParticipant(Base):
+    """Tracks when a user joined or left a session."""
     __tablename__ = "session_participants"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -81,6 +87,7 @@ class SessionParticipant(Base):
 
 
 class SessionUserVotes(Base):
+    """Stores legacy per-user vote data for a session during schema migration."""
     __tablename__ = "session_user_votes"
     __table_args__ = (UniqueConstraint("session_id", "user_id", name="uq_session_user_votes"),)
 
@@ -93,6 +100,7 @@ class SessionUserVotes(Base):
 
 
 class PollTemplate(Base):
+    """Represents a template for an option set that users can save and edit."""
     __tablename__ = "poll_templates"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -103,6 +111,7 @@ class PollTemplate(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class PollTemplatePublished(Base):
+    """Represents a published template available to all users in the public library."""
     __tablename__ = "poll_templates_publish"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -115,6 +124,7 @@ class PollTemplatePublished(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class PollTemplateOption(Base):
+    """Option item that belongs to a saved template or published template."""
     __tablename__ = "poll_template_options"
 
     id = Column(Integer, primary_key=True, index=False)
@@ -124,6 +134,7 @@ class PollTemplateOption(Base):
 
 
 class PollTemplatePublishedOption(Base):
+    """Option item for a published template, containing text and optional image metadata."""
     __tablename__ = "poll_templates_publish_options"
 
     id = Column(Integer, primary_key=True, index=False)

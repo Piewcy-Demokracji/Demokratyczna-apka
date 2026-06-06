@@ -11,6 +11,7 @@ import { TemplateService, Template } from '../../../core/services/template.servi
   templateUrl: './admin-option-sets.component.html',
   styleUrl: './admin-option-sets.component.css'
 })
+/** Admin page for reviewing and managing published or pending option set templates. */
 export class AdminOptionSetsComponent implements OnInit {
   isLoading = true;
   templates: Template[] = [];

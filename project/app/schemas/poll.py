@@ -1,3 +1,4 @@
+"""Pydantic schema definitions for polls, template options, and admin review responses."""
 from pydantic import BaseModel
 from typing import List, Optional, Union
 from datetime import datetime

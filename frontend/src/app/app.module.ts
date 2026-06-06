@@ -7,6 +7,8 @@ import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HomeComponent } from './features/home/home.component';
+
+/** Main app module that connects components, routing, forms, HTTP clients, and interceptors. */
 import { SessionComponent } from './features/session/session.component';
 import { LoginComponent } from './features/auth/login.component';
 import { RegisterComponent } from './features/auth/register.component';
@@ -40,4 +42,5 @@ import { SessionLauncherComponent } from './features/session/session-launcher/se
   ],
   bootstrap: [AppComponent]
 })
+/** Main module class for the Voting App frontend. */
 export class AppModule { }

@@ -16,6 +16,7 @@ interface OptionSet {
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
 })
+/** Component for the user profile page where the current user can manage option sets and launch sessions. */
 export class ProfileComponent implements OnInit {
   username = 'PlaceholderUser';
   isAdmin = false;

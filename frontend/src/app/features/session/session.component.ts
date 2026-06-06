@@ -29,6 +29,7 @@ interface Poll {
   templateUrl: './session.component.html',
   styleUrls: ['./session.component.css']
 })
+/** Component for displaying session state, poll voting UI, and session lifecycle controls. */
 export class SessionComponent implements OnInit, OnDestroy {
   sessionToken: string | null = null;
   sessionPassword: string | null = null;

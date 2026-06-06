@@ -1,3 +1,4 @@
+"""Template API endpoints for managing option set templates and admin review workflows."""
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 from app.models.user import (

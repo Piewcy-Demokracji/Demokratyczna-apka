@@ -27,6 +27,7 @@ interface MeResponse {
 @Injectable({
   providedIn: 'root'
 })
+/** Service that manages authentication state, token storage, and current user information. */
 export class AuthService {
   private apiUrl = 'https://demokratyczny-backend.azurewebsites.net/api/auth';
   private currentUserSubject = new BehaviorSubject<string | null>(this.getStoredUsername());
@@ -34,6 +35,14 @@ export class AuthService {
 
   constructor(private http: HttpClient) {}
 
+  /**
+   * Register a new user account.
+   *
+   * @param username The username for the new account.
+   * @param email The email address for the new account.
+   * @param password The password for the new account.
+   * @returns An observable with the created user response.
+   */
   register(username: string, email: string, password: string): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/register`, {
       username,
@@ -42,6 +51,13 @@ export class AuthService {
     });
   }
 
+  /**
+   * Authenticate a user and store the returned JWT token.
+   *
+   * @param username The username to log in with.
+   * @param password The password to log in with.
+   * @returns An observable containing the auth token response.
+   */
   login(username: string, password: string): Observable<AuthResponse> {
     const body = { username, password };
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
@@ -64,10 +80,20 @@ export class AuthService {
     this.currentUserSubject.next(null);
   }
 
+  /**
+   * Check whether a user is currently logged in based on stored token presence.
+   *
+   * @returns True when an authentication token exists, otherwise false.
+   */
   isLoggedIn(): boolean {
     return !!localStorage.getItem('token');
   }
 
+  /**
+   * Fetch the authenticated user's profile from the backend.
+   *
+   * @returns An observable containing the current user's username and admin flag.
+   */
   whoAmI(): Observable<MeResponse> {
     return this.http.get<MeResponse>(`${this.apiUrl}/me`).pipe(
       tap(me => {
@@ -78,14 +104,29 @@ export class AuthService {
     );
   }
 
+  /**
+   * Determine whether the current user has admin privileges.
+   *
+   * @returns True when the stored admin flag is set, otherwise false.
+   */
   isAdmin(): boolean {
     return localStorage.getItem('is_admin') === 'true';
   }
 
+  /**
+   * Get the currently stored authentication token.
+   *
+   * @returns The JWT token string or null if not set.
+   */
   getToken(): string | null {
     return localStorage.getItem('token');
   }
 
+  /**
+   * Get the currently stored username.
+   *
+   * @returns The username or null if none is stored.
+   */
   getCurrentUsername(): string | null {
     return localStorage.getItem('username');
   }

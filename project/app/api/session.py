@@ -1,3 +1,4 @@
+"""Session API endpoints and helper functions for creating, joining, voting, and managing live sessions."""
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session

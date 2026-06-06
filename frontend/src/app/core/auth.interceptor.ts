@@ -9,6 +9,7 @@ import { Observable } from 'rxjs';
 import { AuthService } from './services/auth.service';
 
 @Injectable()
+/** HTTP interceptor that attaches the JWT bearer token to outgoing API requests. */
 export class AuthInterceptor implements HttpInterceptor {
   constructor(private authService: AuthService) {}
 

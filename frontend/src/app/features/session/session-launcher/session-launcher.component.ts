@@ -15,6 +15,7 @@ interface OptionDraft {
   templateUrl: './session-launcher.component.html',
   styleUrls: ['./session-launcher.component.css']
 })
+/** Component for launching a new session from a chosen template and customizing voting parameters. */
 export class SessionLauncherComponent implements OnInit, OnDestroy {
   templateId!: number;
   title = '';

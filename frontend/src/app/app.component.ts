@@ -7,6 +7,7 @@ import { AuthService } from './core/services/auth.service';
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
+/** Root application component which serves to render the main shell and allows for authentication-aware navigation. */
 export class AppComponent implements OnInit {
   appTitle = 'Voting App';
   isLoggedIn = false;

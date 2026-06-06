@@ -1,3 +1,5 @@
+"""Application startup and database initialization for the Voting App API."""
+
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +22,7 @@ Base.metadata.create_all(bind=engine)
 
 
 def ensure_poll_voting_mode_column() -> None:
+    """Ensure the polls table contains a voting_mode column for poll configuration."""
     inspector = inspect(engine)
     if "polls" not in inspector.get_table_names():
         return
@@ -33,6 +36,7 @@ def ensure_poll_voting_mode_column() -> None:
 
 
 def ensure_image_path_columns() -> None:
+    """Ensure image_path columns exist on tables that may store uploaded image references."""
     inspector = inspect(engine)
     table_names = set(inspector.get_table_names())
     targets = ("poll_options", "poll_template_options", "poll_templates_publish_options")
@@ -50,6 +54,7 @@ def ensure_image_path_columns() -> None:
 
 
 def ensure_unified_session_columns() -> None:
+    """Ensure the sessions table contains the required JSON and metadata columns for the unified session format."""
     inspector = inspect(engine)
     if "sessions" not in inspector.get_table_names():
         return
@@ -86,6 +91,7 @@ ensure_image_path_columns()
 ensure_unified_session_columns()
 
 def create_default_admin_user() -> None:
+    """Create a fallback administrator account if it does not already exist."""
     db = SessionLocal()
     try:
         existing_admin = db.query(User).filter(User.username == "admin1").first()
@@ -102,6 +108,7 @@ def create_default_admin_user() -> None:
         db.close()
 
 def create_dummy_template() -> None:
+    """Insert a default placeholder poll template if no template exists."""
     db = SessionLocal()
     try:
         existing = db.query(PollTemplate).filter(PollTemplate.id == 1).first()

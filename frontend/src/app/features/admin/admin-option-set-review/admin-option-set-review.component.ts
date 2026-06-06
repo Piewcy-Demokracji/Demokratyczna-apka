@@ -11,6 +11,7 @@ import { TemplateService, Template } from '../../../core/services/template.servi
   templateUrl: './admin-option-set-review.component.html',
   styleUrl: './admin-option-set-review.component.css'
 })
+/** Component for reviewing a single option set as an administrator and approving or rejecting it. */
 export class AdminOptionSetReviewComponent implements OnInit {
   template: Template | null = null;
   isLoading = true;

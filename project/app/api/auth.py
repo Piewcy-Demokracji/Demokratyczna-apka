@@ -1,3 +1,4 @@
+"""Authentication API endpoints for registration, login, and current user lookup."""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import timedelta
@@ -17,6 +18,14 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserResponse)
 def register(user: UserCreate, db: Session = Depends(get_db)):
+    """
+    Register a new user account if the username and email are both available.
+
+    param user: The user registration payload containing username, email, and password.
+    param db: Database session for creating the new user.
+
+    return: The created user object.
+    """
     # Check if user already exists
     db_user = db.query(User).filter(User.username == user.username).first()
     if db_user:
@@ -47,6 +56,14 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(user: UserLogin, db: Session = Depends(get_db)):
+    """
+    Authenticate a user and return a JWT access token upon successful login.
+
+    param user: The login payload containing username and password.
+    param db: Database session for looking up the user.
+
+    return: A JWT access token and token type when authentication succeeds.
+    """
     db_user = db.query(User).filter(User.username == user.username).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(
@@ -66,6 +83,14 @@ def read_current_user(
     current_username: str = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """
+    Return the authenticated user's username and admin status.
+
+    param current_username: The username resolved from the bearer token.
+    param db: Database session for verifying the user exists.
+
+    return: The authenticated user's username and admin flag.
+    """
     user = db.query(User).filter(User.username == current_username).first()
     if not user:
         raise HTTPException(

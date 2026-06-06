@@ -51,23 +51,50 @@ export interface SessionStatusResponse {
 @Injectable({
   providedIn: 'root'
 })
+/** Service for interacting with session-related API endpoints and polling workflows. */
 export class SessionService {
   private apiUrl = 'https://demokratyczny-backend.azurewebsites.net/api/session';
 
   constructor(private http: HttpClient) {}
 
+  /**
+   * Create a new live voting session.
+   *
+   * @param request Optional session creation payload.
+   * @returns An observable containing the created session token, code, and host.
+   */
   createSession(request?: SessionCreateRequest): Observable<SessionCreateResponse> {
     return this.http.post<SessionCreateResponse>(`${this.apiUrl}/create`, request || {});
   }
 
+  /**
+   * Join an existing voting session using a session code.
+   *
+   * @param code The public code of the session to join.
+   * @returns An observable with the joined session status.
+   */
   joinSession(code: string): Observable<SessionStatusResponse> {
     return this.http.post<SessionStatusResponse>(`${this.apiUrl}/join`, { code });
   }
 
+  /**
+   * Retrieve the current session status by token.
+   *
+   * @param token The session token to fetch status for.
+   * @returns An observable with session status and poll details.
+   */
   getSession(token: string): Observable<SessionStatusResponse> {
     return this.http.get<SessionStatusResponse>(`${this.apiUrl}/${token}`);
   }
 
+  /**
+   * Submit a vote for a session option.
+   *
+   * @param token The session token.
+   * @param optionId The ID of the selected option.
+   * @param rating The rating value for the option.
+   * @returns An observable for the vote operation.
+   */
   vote(token: string, optionId: number, rating: number): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/${token}/vote`, {
       option_id: optionId,
@@ -75,14 +102,32 @@ export class SessionService {
     });
   }
 
+  /**
+   * End the session poll early as the host.
+   *
+   * @param token The session token to end early.
+   * @returns An observable with the updated session status.
+   */
   endPollEarly(token: string): Observable<SessionStatusResponse> {
     return this.http.post<SessionStatusResponse>(`${this.apiUrl}/${token}/end-poll-early`, {});
   }
 
+  /**
+   * Leave a session as a participant.
+   *
+   * @param token The session token to leave.
+   * @returns An observable that completes when the leave operation finishes.
+   */
   leaveSession(token: string): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/${token}/leave`, {});
   }
 
+  /**
+   * End and delete a session.
+   *
+   * @param token The session token to delete.
+   * @returns An observable that completes when the session is deleted.
+   */
   endSession(token: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${token}`);
   }
