@@ -29,12 +29,6 @@ export class SessionLauncherComponent implements OnInit, OnDestroy {
   // Paths loaded from template on init; never auto-deleted (template still owns them)
   private originalPaths = new Set<string>();
   private launched = false;
-  private isUnloading = false;
-
-  private readonly beforeUnloadHandler = () => {
-    this.isUnloading = true;
-    this.uploadService.beaconCleanup(this.getOrphanedPaths());
-  };
 
   votingModeOptions = [
     { value: 'stars' as const, label: 'Gwiazdki', description: 'Każdą opcję oceniasz osobno w skali 1-5.' },
@@ -61,8 +55,6 @@ export class SessionLauncherComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    window.addEventListener('beforeunload', this.beforeUnloadHandler);
-
     this.templateId = Number(this.route.snapshot.paramMap.get('templateId'));
     this.templateService.getTemplate(this.templateId).subscribe({
       next: (t: Template) => {
@@ -86,8 +78,7 @@ export class SessionLauncherComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    window.removeEventListener('beforeunload', this.beforeUnloadHandler);
-    if (this.launched || this.isUnloading) {
+    if (this.launched) {
       return;
     }
     this.getOrphanedPaths().forEach(path =>

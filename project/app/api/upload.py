@@ -1,15 +1,16 @@
 import io
 import os
 import shutil
+import time
 import uuid
-from typing import Optional, List
+from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 from PIL import Image
 
 from app.core.database import get_db
-from app.core.security import get_current_user, verify_token
+from app.core.security import get_current_user
 from app.models.user import (
     PollOption as PollOptionModel,
     PollTemplateOption,
@@ -102,6 +103,38 @@ def safe_delete_image(image_path: Optional[str]) -> None:
         pass
 
 
+def sweep_orphaned_images(db: Session, max_age_seconds: int = 3600) -> int:
+    """
+    Delete image files in UPLOAD_DIR that are not referenced by any DB record
+    AND are older than max_age_seconds. The age threshold protects fresh uploads
+    that aren't saved to a template/session yet (the user may still be filling
+    out the form). Called opportunistically on login to clean up orphans left by
+    browser crashes, power loss, lost connections, etc.
+
+    Returns the number of files deleted.
+    """
+    if not os.path.isdir(UPLOAD_DIR):
+        return 0
+
+    now = time.time()
+    deleted = 0
+    for filename in os.listdir(UPLOAD_DIR):
+        file_path = os.path.join(UPLOAD_DIR, filename)
+        if not os.path.isfile(file_path):
+            continue
+            age = now - os.path.getmtime(file_path)
+        except OSError:
+            continue
+        if age < max_age_seconds:
+            continue
+        relative_path = f"{UPLOAD_DIR}/{filename}"
+        if is_image_path_referenced(db, relative_path):
+            continue
+        safe_delete_image(relative_path)
+        deleted += 1
+    return deleted
+
+
 def _validate_and_open(content: bytes) -> Image.Image:
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
@@ -162,28 +195,3 @@ def delete_image(
     if is_image_path_referenced(db, normalized):
         return
     safe_delete_image(normalized)
-
-
-@router.post("/cleanup", status_code=status.HTTP_204_NO_CONTENT)
-async def cleanup_images(
-    paths: List[str] = Body(...),
-    token: str = Query(...),
-    db: Session = Depends(get_db),
-):
-    """
-    Deletes a list of unreferenced image files from disk.
-    Called via navigator.sendBeacon() on page unload (browser close/refresh) —
-    token is passed as a query param because sendBeacon cannot set custom headers.
-    Paths referenced by any DB record are silently skipped so a live record is never broken.
-    """
-    username = verify_token(token)
-    if not username:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-    for path in paths:
-        try:
-            normalized = _normalize_uploads_path(path)
-            if not is_image_path_referenced(db, normalized):
-                safe_delete_image(normalized)
-        except HTTPException:
-            pass

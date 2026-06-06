@@ -34,13 +34,6 @@ export class CreateOptionSetComponent implements OnInit, OnDestroy {
   // Paths loaded from DB on edit; treated as durable and never auto-deleted on cancel
   private originalPaths = new Set<string>();
   private submitted = false;
-  // Set when beforeunload fires (browser close/refresh) so ngOnDestroy doesn't double-clean
-  private isUnloading = false;
-
-  private readonly beforeUnloadHandler = () => {
-    this.isUnloading = true;
-    this.uploadService.beaconCleanup(this.getOrphanedPaths());
-  };
 
   constructor(
     private templateService: TemplateService,
@@ -59,8 +52,6 @@ export class CreateOptionSetComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    window.addEventListener('beforeunload', this.beforeUnloadHandler);
-
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.isEditing = true;
@@ -72,6 +63,7 @@ export class CreateOptionSetComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     window.removeEventListener('beforeunload', this.beforeUnloadHandler);
     if (this.submitted || this.isUnloading) {
+    if (this.submitted) {
       return;
     }
     this.getOrphanedPaths().forEach(path =>

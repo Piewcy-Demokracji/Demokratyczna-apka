@@ -11,6 +11,7 @@ from app.core.security import (
 )
 from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin, UserResponse, Token
+from app.api.upload import sweep_orphaned_images
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -53,6 +54,11 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
+
+    try:
+        sweep_orphaned_images(db)
+    except Exception:
+        pass
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
