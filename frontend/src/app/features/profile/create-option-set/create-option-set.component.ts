@@ -61,8 +61,6 @@ export class CreateOptionSetComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    window.removeEventListener('beforeunload', this.beforeUnloadHandler);
-    if (this.submitted || this.isUnloading) {
     if (this.submitted) {
       return;
     }
