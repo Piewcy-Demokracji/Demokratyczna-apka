@@ -29,6 +29,12 @@ export class SessionLauncherComponent implements OnInit, OnDestroy {
   // Paths loaded from template on init; never auto-deleted (template still owns them)
   private originalPaths = new Set<string>();
   private launched = false;
+  private isUnloading = false;
+
+  private readonly beforeUnloadHandler = () => {
+    this.isUnloading = true;
+    this.uploadService.beaconCleanup(this.getOrphanedPaths());
+  };
 
   votingModeOptions = [
     { value: 'stars' as const, label: 'Gwiazdki', description: 'Każdą opcję oceniasz osobno w skali 1-5.' },
@@ -55,6 +61,8 @@ export class SessionLauncherComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
+
     this.templateId = Number(this.route.snapshot.paramMap.get('templateId'));
     this.templateService.getTemplate(this.templateId).subscribe({
       next: (t: Template) => {
@@ -78,14 +86,19 @@ export class SessionLauncherComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.launched) {
+    window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+    if (this.launched || this.isUnloading) {
       return;
     }
-    this.options.forEach(opt => {
-      if (opt.image_path && !this.originalPaths.has(opt.image_path)) {
-        this.uploadService.deleteImage(opt.image_path).subscribe({ error: () => {} });
-      }
-    });
+    this.getOrphanedPaths().forEach(path =>
+      this.uploadService.deleteImage(path).subscribe({ error: () => {} })
+    );
+  }
+
+  private getOrphanedPaths(): string[] {
+    return this.options
+      .filter(opt => opt.image_path && !this.originalPaths.has(opt.image_path))
+      .map(opt => opt.image_path as string);
   }
 
   addOption(): void {

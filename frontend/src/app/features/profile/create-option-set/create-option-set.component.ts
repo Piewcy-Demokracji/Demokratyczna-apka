@@ -34,6 +34,13 @@ export class CreateOptionSetComponent implements OnInit, OnDestroy {
   // Paths loaded from DB on edit; treated as durable and never auto-deleted on cancel
   private originalPaths = new Set<string>();
   private submitted = false;
+  // Set when beforeunload fires (browser close/refresh) so ngOnDestroy doesn't double-clean
+  private isUnloading = false;
+
+  private readonly beforeUnloadHandler = () => {
+    this.isUnloading = true;
+    this.uploadService.beaconCleanup(this.getOrphanedPaths());
+  };
 
   constructor(
     private templateService: TemplateService,
@@ -52,6 +59,8 @@ export class CreateOptionSetComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
+
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.isEditing = true;
@@ -61,14 +70,19 @@ export class CreateOptionSetComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.submitted) {
+    window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+    if (this.submitted || this.isUnloading) {
       return;
     }
-    this.options.forEach(opt => {
-      if (opt.image_path && !this.originalPaths.has(opt.image_path)) {
-        this.uploadService.deleteImage(opt.image_path).subscribe({ error: () => {} });
-      }
-    });
+    this.getOrphanedPaths().forEach(path =>
+      this.uploadService.deleteImage(path).subscribe({ error: () => {} })
+    );
+  }
+
+  private getOrphanedPaths(): string[] {
+    return this.options
+      .filter(opt => opt.image_path && !this.originalPaths.has(opt.image_path))
+      .map(opt => opt.image_path as string);
   }
 
   loadTemplateForEditing(id: number): void {

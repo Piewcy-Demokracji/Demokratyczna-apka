@@ -2,14 +2,14 @@ import io
 import os
 import shutil
 import uuid
-from typing import Optional
+from typing import Optional, List
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 from PIL import Image
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, verify_token
 from app.models.user import (
     PollOption as PollOptionModel,
     PollTemplateOption,
@@ -162,3 +162,28 @@ def delete_image(
     if is_image_path_referenced(db, normalized):
         return
     safe_delete_image(normalized)
+
+
+@router.post("/cleanup", status_code=status.HTTP_204_NO_CONTENT)
+async def cleanup_images(
+    paths: List[str] = Body(...),
+    token: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Deletes a list of unreferenced image files from disk.
+    Called via navigator.sendBeacon() on page unload (browser close/refresh) —
+    token is passed as a query param because sendBeacon cannot set custom headers.
+    Paths referenced by any DB record are silently skipped so a live record is never broken.
+    """
+    username = verify_token(token)
+    if not username:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    for path in paths:
+        try:
+            normalized = _normalize_uploads_path(path)
+            if not is_image_path_referenced(db, normalized):
+                safe_delete_image(normalized)
+        except HTTPException:
+            pass

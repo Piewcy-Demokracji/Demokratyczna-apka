@@ -29,6 +29,19 @@ export class UploadService {
     return this.http.delete<void>(`${this.apiUrl}/image`, { params });
   }
 
+  beaconCleanup(paths: string[]): void {
+    if (paths.length === 0) {
+      return;
+    }
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return;
+    }
+    const url = `${this.apiUrl}/cleanup?token=${encodeURIComponent(token)}`;
+    const blob = new Blob([JSON.stringify(paths)], { type: 'application/json' });
+    navigator.sendBeacon(url, blob);
+  }
+
   getImageUrl(path: string | null | undefined): string | null {
     if (!path) {
       return null;
