@@ -122,6 +122,7 @@ def sweep_orphaned_images(db: Session, max_age_seconds: int = 3600) -> int:
         file_path = os.path.join(UPLOAD_DIR, filename)
         if not os.path.isfile(file_path):
             continue
+        try:
             age = now - os.path.getmtime(file_path)
         except OSError:
             continue
