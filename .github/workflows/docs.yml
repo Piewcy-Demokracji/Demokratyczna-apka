@@ -55,10 +55,11 @@ jobs:
         with:
           node-version: '24' # Wpisz wersje (np. 18, 20, 22)
           cache: 'npm'
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: frontend/package-lock.json
       
       - name: Install dependencies
         run: npm ci
+        working-directory: ./frontend
       
       - name: Generate Typescript documentaton
         run: npx typedoc --tsconfig ./tsconfig.json --out ../docs/_typescript
