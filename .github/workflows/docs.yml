@@ -66,7 +66,7 @@ jobs:
         working-directory: ./frontend
       
       - name: Generate Typescript documentaton
-        run: npx typedoc --tsconfig ./tsconfig.json --entryPointStrategy expand ./src --out ../docs/_typescript --excludeNotExported false
+        run: npx typedoc --tsconfig ./tsconfig.json --entryPointStrategy expand ./src --out ../docs/_typescript  --excludePrivate false --excludeNotDocumented false
         working-directory: ./frontend
       
       - name: Upload Typescript artifact
