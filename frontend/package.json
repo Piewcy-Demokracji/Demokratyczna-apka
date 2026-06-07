@@ -20,7 +20,6 @@
     "@angular/router": "^17.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
-    "typedoc": "^0.28.19",
     "zone.js": "~0.14.0"
   },
   "devDependencies": {
@@ -34,6 +33,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "typedoc": "^0.25.13",
     "typescript": "~5.2.0"
   }
 }
