@@ -20,6 +20,7 @@
     "@angular/router": "^17.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "typedoc": "^0.28.19",
     "zone.js": "~0.14.0"
   },
   "devDependencies": {
