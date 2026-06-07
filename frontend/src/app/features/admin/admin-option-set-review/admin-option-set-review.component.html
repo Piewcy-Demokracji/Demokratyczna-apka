@@ -1,0 +1,32 @@
+<div class="review-page">
+  <div class="review-header">
+    <h2>Review Option Set</h2>
+    <button class="btn btn-secondary" (click)="goBack()">Back to Queue</button>
+  </div>
+
+  <div *ngIf="isLoading" class="state-box">
+    <p>Loading set details...</p>
+  </div>
+
+  <div *ngIf="!isLoading && template" class="review-card">
+    <h3>{{ template.title }}</h3>
+    <p class="author">Created by: {{ template.creator_username || ('User #' + template.created_by) }}</p>
+    <p *ngIf="template.description">{{ template.description }}</p>
+
+    <div class="options-section">
+      <h4>Options</h4>
+      <ul>
+        <li *ngFor="let option of template.options">{{ option.text }}</li>
+      </ul>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-success" [disabled]="isSubmitting" (click)="publish()">
+        {{ isSubmitting ? 'Processing...' : 'Publish' }}
+      </button>
+      <button class="btn btn-danger" [disabled]="isSubmitting" (click)="reject()">
+        Reject
+      </button>
+    </div>
+  </div>
+</div>

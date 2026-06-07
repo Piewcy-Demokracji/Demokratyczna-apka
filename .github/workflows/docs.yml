@@ -1,44 +1,136 @@
-name: Build Python documentation
+name: Build Python & Typescript documentation
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-jobs:
-  docs:
-    runs-on: ubuntu-latest
-
-    permissions:
+permissions:
       contents: write
       pages: write
       id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  generate-python-docs:
+    runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
+      
       - name: Install requirements
         run: pip install -r requirements.txt
 
       - name: Generate API docs
-        run: sphinx-apidoc -o docs/ project
+        run: sphinx-apidoc -f -o docs/ project
 
       - name: Generate documentation
-        run: sphinx-build -b html docs docs/_build
+        run: sphinx-build -b html docs docs/_python
+
+      - name: Upload Python artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-python
+          path: ./docs/_python
+
+
+  generate-typescript-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24' # Wpisz wersje (np. 18, 20, 22)
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: install dependencies
+        run: npm ci
+        working-directory: ./frontend
+      
+      - name: Generate Typescript documentaton
+        run: npx typedoc --tsconfig ./tsconfig.json --out ../docs/_typescript
+        working-directory: ./frontend
+      
+      - name: Upload Typescript artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-typescript
+          path: ./docs/_typescript
+
+
+  deploy-docs:
+
+    needs: [generate-python-docs, generate-typescript-docs]
+
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+
+    steps:
+      - name: Create final docs directory
+        run: mkdir -p ./final-docs
+
+      - name: Download Python artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-python
+          path: ./final-docs/python
+
+      - name: Download Typescript artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-typescript
+          path: ./final-docs/typescript
+
+      - name: Create entry index.html
+        run: |
+          cat <<EOF > ./final-docs/index.html
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Project Documentation</title>
+              <style>
+                  body { font-family: sans-serif; text-align: center; padding-top: 50px; }
+                  a { display: inline-block; margin: 20px; padding: 15px 30px; background: #00768b; color: white; text-decoration: none; border-radius: 5px; }
+                  a:hover { background: #005a6a; }
+              </style>
+          </head>
+          <body>
+              <h1>Dokumentacja Projektu</h1>
+              <p>Wybierz moduł, którego dokumentację chcesz przeglądać:</p>
+              <a href="./typescript/index.html">TypeScript API Docs (TypeDoc)</a>
+              <a href="./python/index.html">Python Docs (Sphinx)</a>
+          </body>
+          </html>
+          EOF
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
-
-      - name: Upload artifact
+        
+      - name: Deploy pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/_build
-
-      - name: Deploy
+          path: ./final-docs
+        
+      - name: Deploy to Github Pages
+        id: pages
         uses: actions/deploy-pages@v4
+        
+
+       

@@ -1,0 +1,48 @@
+<section class="hero page-card">
+  <div class="section-heading">
+    <div>
+      <h1 class="page-title">Enter session code</h1>
+      <p class="page-subtitle">Join a live vote or launch a new poll from your profile.</p>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <form class="session-form" (ngSubmit)="enterSession()">
+    <input type="text" name="joinCode" [(ngModel)]="joinCode" (ngModelChange)="updateJoinCode($event)" placeholder="ABC123" maxlength="6" pattern="[A-Za-z0-9]{6}" required />
+    <button type="submit" class="btn btn-primary">Enter Session</button>
+  </form>
+
+  <div *ngIf="isLoggedIn" class="session-note text-muted">
+    Or go to your <a routerLink="/profile">profile</a> to create and launch your option sets.
+  </div>
+
+  <div *ngIf="isLoggedIn" class="session-cta">
+    <a [routerLink]="['/session/launch', 1]" class="btn btn-primary">+ Pusta ankieta</a>
+  </div>
+</section>
+
+<section class="public-option-sets">
+  <div class="section-heading">
+    <h2>Public option sets</h2>
+  </div>
+
+  <div *ngIf="publicOptionSets.length === 0" class="state-box">
+    <p>No public option sets are available at the moment.</p>
+  </div>
+
+  <div class="card-list">
+    <div *ngFor="let set of publicOptionSets" class="option-set-card">
+      <div class="option-set-details">
+        <h4>{{ set.name }}</h4>
+        <p *ngIf="set.description">{{ set.description }}</p>
+        <small class="text-muted">{{ set.optionsCount }} options</small>
+      </div>
+      <div class="option-set-actions">
+        <button class="btn btn-primary" (click)="launchSet(set)">Launch</button>
+      </div>
+    </div>
+  </div>
+</section>

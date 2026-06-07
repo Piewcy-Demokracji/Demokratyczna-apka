@@ -1,0 +1,94 @@
+.admin-page {
+  min-height: calc(100vh - 88px);
+  padding: 2rem 1rem 3rem;
+}
+
+.admin-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.admin-header h2 {
+  margin: 0;
+  color: var(--text);
+}
+
+.section-wrap {
+  margin-bottom: 2rem;
+}
+
+.state-box,
+.template-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 4px);
+  padding: 1.35rem;
+  margin-bottom: 1rem;
+}
+
+.section-title {
+  margin: 0 0 0.75rem;
+  color: var(--text);
+}
+
+.template-card {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.template-content h3 {
+  margin: 0 0 0.35rem;
+  color: var(--text);
+}
+
+.template-content p,
+.template-content small {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.template-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.btn {
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.85rem 1.2rem;
+  color: white;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.btn-danger {
+  background: var(--danger);
+}
+
+@media (max-width: 768px) {
+  .template-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .template-actions {
+    width: 100%;
+  }
+}

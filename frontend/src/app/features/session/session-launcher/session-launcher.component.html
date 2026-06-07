@@ -1,0 +1,87 @@
+<div class="launcher-page">
+  <div class="launcher-card">
+    <a routerLink="/profile" class="back-link">← Wróć do profilu</a>
+
+    <div *ngIf="loading" class="loading">Ładowanie szablonu...</div>
+
+    <ng-container *ngIf="!loading">
+      <h1>Konfiguruj ankietę</h1>
+
+      <div class="field">
+        <label>Tytuł</label>
+        <input [(ngModel)]="title" name="title" placeholder="Tytuł ankiety" />
+      </div>
+
+      <div class="field">
+        <label>Opcje</label>
+        <div *ngIf="uploadError" class="upload-error">{{ uploadError }}</div>
+        <div class="options-list">
+          <div class="option-row" *ngFor="let opt of options; let i = index; trackBy: trackByIndex">
+            <span class="num">{{ i + 1 }}.</span>
+
+            <div class="option-image-slot">
+              <ng-container *ngIf="opt.image_path; else noImgTpl">
+                <img [src]="getImageUrl(opt.image_path)" alt="Zdjęcie opcji" class="option-thumb" />
+                <button type="button" class="remove-img-btn" (click)="removeImage(i)" title="Usuń zdjęcie">×</button>
+              </ng-container>
+              <ng-template #noImgTpl>
+                <label class="upload-label" [class.uploading]="opt.uploading">
+                  <span *ngIf="!opt.uploading">📷</span>
+                  <span *ngIf="opt.uploading" class="upload-spinner">…</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
+                    [name]="'img-' + i"
+                    (change)="onImageSelected($event, i)"
+                    hidden>
+                </label>
+              </ng-template>
+            </div>
+
+            <input [(ngModel)]="options[i].text" [name]="'opt' + i" placeholder="Opcja {{ i + 1 }}" />
+            <button type="button" (click)="removeOption(i)" [disabled]="options.length <= 2" class="btn-remove">✕</button>
+          </div>
+        </div>
+        <button type="button" (click)="addOption()" class="btn-add">+ Dodaj opcję</button>
+      </div>
+
+      <div class="field">
+        <label>Tryb głosowania</label>
+        <div class="mode-toggle">
+          <button
+            type="button"
+            *ngFor="let mode of votingModeOptions"
+            class="mode-btn"
+            [class.active]="votingMode === mode.value"
+            (click)="votingMode = mode.value">
+            <span class="mode-title">{{ mode.label }}</span>
+            <span class="mode-description">{{ mode.description }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Czas trwania</label>
+        <div class="presets">
+          <button type="button" *ngFor="let p of presets"
+            class="preset-btn" [class.active]="durationMinutes === p.value"
+            (click)="durationMinutes = p.value">{{ p.label }}</button>
+        </div>
+        <div class="custom-row">
+          <span>Własny:</span>
+          <input type="number" [(ngModel)]="durationMinutes" name="duration" min="1" max="60" />
+          <span>minut</span>
+        </div>
+      </div>
+
+      <div class="summary">
+        <strong>{{ title || '—' }}</strong> · {{ filledOptionsCount }} opcji · {{ durationMinutes }} min
+        · tryb: {{ votingMode === 'single' ? 'jedna opcja' : 'gwiazdki' }}
+      </div>
+
+      <button class="btn-primary" (click)="launch()" [disabled]="launching">
+        {{ launching ? 'Uruchamianie...' : '🚀 Uruchom sesję' }}
+      </button>
+    </ng-container>
+  </div>
+</div>

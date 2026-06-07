@@ -1,0 +1,54 @@
+<div class="admin-page">
+  <div class="admin-header">
+    <h2>Admin Option Set Review</h2>
+    <button class="btn btn-secondary" (click)="goProfile()">Back to Profile</button>
+  </div>
+
+  <div *ngIf="isLoading" class="state-box">
+    <p>Loading option sets...</p>
+  </div>
+
+  <div *ngIf="!isLoading && templates.length === 0" class="state-box">
+    <p>No option sets waiting for admin review.</p>
+  </div>
+
+  <div *ngIf="!isLoading && templates.length > 0" class="section-wrap">
+    <h3 class="section-title">Published</h3>
+    <div *ngIf="publishedTemplates.length === 0" class="state-box">
+      <p>No published option sets.</p>
+    </div>
+    <div *ngFor="let template of publishedTemplates" class="template-card">
+      <div class="template-content">
+        <h3>{{ template.title }}</h3>
+        <p *ngIf="template.description">{{ template.description }}</p>
+        <small>
+          Author: {{ template.creator_username || ('User #' + template.created_by) }} | {{ template.options.length }} options
+        </small>
+      </div>
+      <div class="template-actions">
+        <button class="btn btn-primary" (click)="openReview(template)">Open Review</button>
+        <button class="btn btn-danger" (click)="rejectFromList(template)">Reject</button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!isLoading && templates.length > 0" class="section-wrap">
+    <h3 class="section-title">Not Published</h3>
+    <div *ngIf="notPublishedTemplates.length === 0" class="state-box">
+      <p>No option sets waiting for publish.</p>
+    </div>
+    <div *ngFor="let template of notPublishedTemplates" class="template-card">
+      <div class="template-content">
+        <h3>{{ template.title }}</h3>
+        <p *ngIf="template.description">{{ template.description }}</p>
+        <small>
+          Author: {{ template.creator_username || ('User #' + template.created_by) }} | {{ template.options.length }} options
+        </small>
+      </div>
+      <div class="template-actions">
+        <button class="btn btn-primary" (click)="openReview(template)">Open Review</button>
+        <button class="btn btn-danger" (click)="rejectFromList(template)">Reject</button>
+      </div>
+    </div>
+  </div>
+</div>

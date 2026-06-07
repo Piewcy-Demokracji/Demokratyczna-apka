@@ -1,0 +1,87 @@
+<div class="container session-container">
+  <div class="session-card">
+    <h1>{{ poll?.title || 'Session' }}</h1>
+
+    <div *ngIf="message" class="alert alert-warning">{{ message }}</div>
+
+    <div *ngIf="!message">
+      <div *ngIf="sessionEnded && !isComplete" class="session-ended">
+        <p>Session ended</p>
+        <p>You will be redirected to home...</p>
+      </div>
+
+      <div *ngIf="!sessionEnded || isComplete">
+        <p *ngIf="sessionPassword">Session password: <strong>{{ sessionPassword }}</strong></p>
+        <p>Your status: <strong>{{ status }}</strong></p>
+        <div class="session-actions">
+          <button *ngIf="isHost" class="btn btn-danger" (click)="endSession()">End session</button>
+          <button *ngIf="isHost && !isComplete && timeLeft > 0" class="btn btn-secondary" (click)="endPollEarly()">End polling early</button>
+          <button *ngIf="!isHost" class="btn btn-secondary" (click)="leaveSession()">Leave session</button>
+        </div>
+
+        <div *ngIf="poll && !isComplete" class="poll-section">
+          <p>Time left: {{ formatTime(timeLeft) }}</p>
+
+          <ng-container *ngIf="isSingleChoiceMode(); else starVoting">
+            <button
+              *ngFor="let option of poll.options"
+              type="button"
+              class="option-card single-choice-card"
+              [class.selected]="option.userRating === 1"
+              (click)="rateOption(option, 1)">
+              <img
+                *ngIf="getImageUrl(option.image_path)"
+                [src]="getImageUrl(option.image_path)"
+                alt="{{ option.name }}"
+                class="option-img" />
+              <span class="single-choice-star" [class.active]="option.userRating === 1">&#9733;</span>
+              <div class="option-copy">
+                <div class="option-name">{{ option.name }}</div>
+                <div class="option-note">{{ option.userRating === 1 ? 'Twoja wybrana opcja' : 'Kliknij, aby wybrać' }}</div>
+              </div>
+            </button>
+          </ng-container>
+
+          <ng-template #starVoting>
+            <div *ngFor="let option of poll.options" class="option-card">
+              <img
+                *ngIf="getImageUrl(option.image_path)"
+                [src]="getImageUrl(option.image_path)"
+                alt="{{ option.name }}"
+                class="option-img" />
+              <div class="option-name">{{ option.name }}</div>
+              <div class="star-bar">
+                <span
+                  *ngFor="let star of [1,2,3,4,5]"
+                  (click)="rateOption(option, star)"
+                  [class]="getStarClass(option, star)"
+                >&#9733;</span>
+              </div>
+            </div>
+          </ng-template>
+        </div>
+
+        <div *ngIf="isComplete && poll" class="summary-section">
+          <h2>Summary</h2>
+          <div *ngFor="let option of summaryOptions" class="summary-card">
+            <img
+              *ngIf="getImageUrl(option.image_path)"
+              [src]="getImageUrl(option.image_path)"
+              alt="{{ option.name }}"
+              class="summary-img" />
+            <div class="summary-text">
+              <h3>{{ option.name }}</h3>
+              <p>{{ getSummaryPrimaryLabel() }}: {{ getSummaryPrimaryValue(option) }}</p>
+              <p>Votes: {{ option.rating_count }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-actions">
+          <button class="btn btn-primary" (click)="downloadResults()" [disabled]="!image_base64">Download results</button>
+          <button class="btn btn-primary" (click)="goHome()">Back to home</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,34 @@
+<div class="profile-page">
+  <div class="profile-header">
+    <div class="profile-avatar">{{ usernameInitial }}</div>
+    <div>
+      <h2>{{ username }}</h2>
+      <p>Your personal dashboard for your vote option sets.</p>
+    </div>
+  </div>
+
+  <div class="option-sets">
+    <div class="profile-actions">
+      <button *ngIf="isAdmin" class="btn btn-admin" (click)="goToAdminReview()">Admin Review</button>
+    </div>
+    <h3>Your option sets</h3>
+    <div *ngIf="optionSets.length === 0" class="no-option-sets">
+      <p>You don't have any option sets yet. Create your first one to get started!</p>
+    </div>
+    <div *ngFor="let set of optionSets" class="option-set-card">
+      <div class="option-set-details">
+        <h4>{{ set.name }}</h4>
+        <p *ngIf="set.description as description">{{ description }}</p>
+        <small>{{ set.optionsCount }} options</small>
+      </div>
+      <div class="option-set-actions">
+        <button class="btn btn-secondary" (click)="editSet(set)">Edit</button>
+        <a [routerLink]="['/session/launch', set.id]" class="btn btn-primary">Launch</a>
+        <button class="btn btn-danger" (click)="deleteSet(set)">Delete</button>
+      </div>
+    </div>
+    <div class="new-set-wrapper">
+      <button class="btn btn-primary" (click)="addOptionSet()">Add New Option Set</button>
+    </div>
+  </div>
+</div>
