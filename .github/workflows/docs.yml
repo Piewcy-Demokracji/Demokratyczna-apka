@@ -59,7 +59,6 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
-        working-directory: ./frontend
       
       - name: Generate Typescript documentaton
         run: npx typedoc --tsconfig ./tsconfig.json --out ../docs/_typescript
